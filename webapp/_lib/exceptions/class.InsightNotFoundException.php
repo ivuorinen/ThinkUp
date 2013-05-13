@@ -1,9 +1,9 @@
 <?php
 /**
  *
- * ThinkUp/webapp/_lib/model/exceptions/APIOAuthException.php
+ * ThinkUp/webapp/_lib/model/exceptions/class.InsightNotFoundEception.php
  *
- * Copyright (c) 2012-2013 Gina Trapani
+ * Copyright (c) 2013 Gina Trapani, Nilaksh Das
  *
  * LICENSE:
  *
@@ -20,9 +20,12 @@
  * You should have received a copy of the GNU General Public License along with ThinkUp.  If not, see
  * <http://www.gnu.org/licenses/>.
  *
- *
- * @author Gina Trapani <ginatrapani at gmail dot com>
+ * @author Nilaksh Das <nilakshdas@gmail.com>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2012-2013 Gina Trapani
+ * @copyright 2013 Gina Trapani
  */
-class APIOAuthException extends Exception { }
+class InsightNotFoundException extends Exception {
+    public function __construct() {
+        parent::__construct('The requested insight data is not available.');
+    }
+}
