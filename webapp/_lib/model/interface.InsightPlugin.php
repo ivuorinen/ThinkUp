@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/model/interface.InsightPlugin.php
  *
- * Copyright (c) 2012-2013 Gina Trapani
+ * Copyright (c) 2012-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -24,7 +24,7 @@
  * Insight plugin interface
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2012-2013 Gina Trapani
+ * @copyright 2012-2016 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  *
  */
@@ -32,10 +32,11 @@ interface InsightPlugin extends GenericPlugin {
     /**
      * Generate insight.
      * @param Instance $instance
+     * @param User $user User associated with the instance
      * @param arr Post objects from the last week
      * @param int $number_days Days to backfill insights
      * @return void
      */
-    public function generateInsight(Instance $instance, $last_week_of_posts, $number_days);
+    public function generateInsight(Instance $instance, User $user, $last_week_of_posts, $number_days);
 }
 

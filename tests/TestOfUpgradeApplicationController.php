@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/TestOfUpgradeApplicationController.php
  *
- * Copyright (c) 2012-2013 Mark Wilkie
+ * Copyright (c) 2012-2016 Mark Wilkie
  *
  * LICENSE:
  *
@@ -23,7 +23,7 @@
  * TestOfUpgradeApplicationController
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2012-2013 Mark Wilkie
+ * @copyright 2012-2016 Mark Wilkie
  * @author Mark Wilkie <mwilkie[at]gmail[dot]com>
  */
 require_once dirname(__FILE__).'/init.tests.php';
@@ -75,10 +75,7 @@ class TestOfUpgradeApplicationController extends ThinkUpUnitTestCase {
         $config = Config::getInstance();
         $controller = new UpgradeApplicationController(true);
         $results = $controller->go();
-        $v_mgr = $controller->getViewManager();
-        $config = Config::getInstance();
-        $this->assertEqual('You must <a href="'.$config->getValue('site_root_path').
-        'session/login.php">log in</a> to do this.', $v_mgr->getTemplateDataItem('error_msg'));
+        $this->assertPattern( '/session\/login.php\?redirect\=/', $controller->redirect_destination);
     }
 
     public function testException() {
@@ -133,7 +130,7 @@ class TestOfUpgradeApplicationController extends ThinkUpUnitTestCase {
 
     public function testNotEnoughAvailableFileSpace() {
         // More disk space than is available
-        AppUpgraderDiskUtil::$DISK_SPACE_NEEDED = disk_free_space(dirname(__FILE__))+(1024*1024*10);
+        AppUpgraderDiskUtil::$DISK_SPACE_NEEDED = disk_free_space(dirname(__FILE__))+(1024*1024*10*10);
         $upgrade_controller = new UpgradeApplicationController(true);
         try {
             $upgrade_controller->runUpdate($this->test_web_dir);
@@ -247,8 +244,8 @@ class TestOfUpgradeApplicationController extends ThinkUpUnitTestCase {
         '{"version":"100.1", "url":"'.THINKUP_WEBAPP_PATH.'test_installer/thinkup.zip"}');
 
         $update_info = $upgrade_controller->runUpdate( $this->test_web_dir );
-        $this->assertPattern('/data\/\d+\-v1\-config\.inc\.backup\.php/', $update_info['config']);
-        $this->assertPattern('/data\/\d+\-v1\-backup\.zip/', $update_info['backup']);
+        $this->assertPattern('/\d+\-v1\-config\.inc\.backup\.php/', $update_info['config']);
+        $this->assertPattern('/\d+\-v1\-backup\.zip/', $update_info['backup']);
 
         $this->assertTrue(file_exists($this->test_web_dir . '/index.php'), "we should have our index file back");
         $data_path = FileDataManager::getDataPath();

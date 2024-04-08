@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/plugins/twitter/tests/TestOfTwitterAPIAccessorOAuth.php
  *
- * Copyright (c) 2009-2013 Gina Trapani, Mark Wilkie
+ * Copyright (c) 2009-2016 Gina Trapani, Mark Wilkie
  *
  * LICENSE:
  *
@@ -23,7 +23,7 @@
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  * @author Mark Wilkie <mark[at]bitterpill[dot]org>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani, Mark Wilkie
+ * @copyright 2009-2016 Gina Trapani, Mark Wilkie
  */
 require_once dirname(__FILE__) . '/../../../../tests/init.tests.php';
 require_once THINKUP_WEBAPP_PATH.'_lib/extlib/simpletest/autorun.php';
@@ -35,7 +35,7 @@ require_once THINKUP_WEBAPP_PATH.'plugins/twitter/model/class.TwitterAPIEndpoint
 
 class TestOfTwitterAPIAccessorOAuth extends ThinkUpBasicUnitTestCase {
 
-    var $test_data_path = 'webapp/plugins/twitter/tests/testdata/';
+    var $test_data_path = 'webapp/plugins/twitter/tests/data/';
 
     public function testConstructor() {
         $this->debug(__METHOD__);
@@ -92,9 +92,23 @@ class TestOfTwitterAPIAccessorOAuth extends ThinkUpBasicUnitTestCase {
         $this->assertNull($result);
     }
 
+    public function testParseJSONTweetWithPhotos() {
+        $api = new TwitterAPIAccessorOAuth($oauth_access_token='111', $oauth_access_token_secret='222',
+            $oauth_consumer_key=1234, $oauth_consumer_secret=1234, $num_twitter_errors=5, $log=true);
+        $data = file_get_contents(THINKUP_ROOT_PATH . $this->test_data_path.'json/phototweet.json');
+        $results = $api->parseJSONTweet($data);
+        $this->assertNotNull($results['photos']);
+        $this->assertEqual(count($results['photos']), 1);
+        $this->assertEqual("http://pbs.twimg.com/media/Bopuw9BIEAAAYVN.jpg", $results['photos'][0]->media_url);
+        $this->assertEqual("http://twitter.com/CDMoyer/status/471310898695794688/photo/1",
+            $results['photos'][0]->expanded_url);
+        $this->assertEqual("http://t.co/1z8GGl5Zrv",
+            $results['photos'][0]->url);
+    }
+
     public function testParseJSONTweet() {
         $api = new TwitterAPIAccessorOAuth($oauth_access_token='111', $oauth_access_token_secret='222',
-        $oauth_consumer_key=1234, $oauth_consumer_secret=1234, $num_twitter_errors=5, $log=true);
+            $oauth_consumer_key=1234, $oauth_consumer_secret=1234, $num_twitter_errors=5, $log=true);
 
         $data = file_get_contents(THINKUP_ROOT_PATH . $this->test_data_path.'json/tweet.json');
 
@@ -109,6 +123,7 @@ class TestOfTwitterAPIAccessorOAuth extends ThinkUpBasicUnitTestCase {
         $this->assertEqual($results["author_fullname"], "Twitter API");
         $this->assertEqual($results["location"], "San Francisco, CA");
         $this->assertEqual($results["is_protected"], false);
+        $this->assertEqual($results["favlike_count_cache"], 53);
     }
 
     public function testParseJSONTweetPrivate() {
@@ -193,6 +208,13 @@ class TestOfTwitterAPIAccessorOAuth extends ThinkUpBasicUnitTestCase {
         $this->assertEqual($results[0]["user_name"], "twitterapi");
         $this->assertEqual($results[0]["author_fullname"], "Twitter API");
         $this->assertEqual($results[0]["location"], "San Francisco, CA");
+
+        // assert reply is processed correctly
+        $this->assertEqual($results[5]["post_text"],
+        "@foetusite minutes after tweeting, a developer was kind enough to submit one: https://t.co/8qkLwLuW ^TS");
+        $this->assertEqual($results[5]["post_id"], "292042417505443840");
+        $this->assertEqual($results[5]["in_reply_to_user_id"], "93378131");
+        $this->assertEqual($results[5]["in_reply_to_post_id"], "292038019752538112");
     }
 
     public function testParseJSONUser() {
@@ -207,6 +229,7 @@ class TestOfTwitterAPIAccessorOAuth extends ThinkUpBasicUnitTestCase {
         $this->assertEqual($results["user_id"], "795649");
         $this->assertEqual($results["user_name"], "rsarver");
         $this->assertEqual($results["full_name"], "Ryan Sarver");
+        $this->assertEqual($results["is_verified"], 1);
     }
 
     public function testParseJSONUsers() {
@@ -311,5 +334,17 @@ class TestOfTwitterAPIAccessorOAuth extends ThinkUpBasicUnitTestCase {
         $this->assertEqual($results[1]["follower_count"], 506);
         $this->assertEqual($results[1]["post_count"], 5848);
         $this->assertEqual($results[1]["friend_count"], 713);
+    }
+    public function testParseJSONErrorCodeAPI() {
+        $api = new TwitterAPIAccessorOAuth($oauth_access_token='111', $oauth_access_token_secret='222',
+        $oauth_consumer_key=1234, $oauth_consumer_secret=1234, $num_twitter_errors=5, $log=true);
+
+        //List of users with cursor
+        $data = file_get_contents(THINKUP_ROOT_PATH . $this->test_data_path.'json/error_source_user.json');
+
+        $results = $api->parseJSONErrorCodeAPI($data);
+
+        $this->debug(Utils::varDumpToString($results));
+        $this->assertEqual($results["error"], 163);
     }
 }

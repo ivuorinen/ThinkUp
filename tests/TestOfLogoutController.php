@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/TestOfLogoutController.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -23,7 +23,7 @@
  * Test of LoginController
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  *
  */
@@ -36,10 +36,7 @@ class TestOfLogoutController extends ThinkUpUnitTestCase {
     public function testLogoutNotLoggedIn() {
         $controller = new LogoutController(true);
         $results = $controller->go();
-        $v_mgr = $controller->getViewManager();
-        $config = Config::getInstance();
-        $this->assertEqual('You must <a href="'.$config->getValue('site_root_path').
-        'session/login.php">log in</a> to do this.', $v_mgr->getTemplateDataItem('error_msg'));
+        $this->assertPattern( '/session\/login.php\?redirect\=/', $controller->redirect_destination);
     }
 
     public function testLogoutWhileLoggedIn() {
@@ -49,5 +46,16 @@ class TestOfLogoutController extends ThinkUpUnitTestCase {
         $this->debug($results);
         //$this->assertPattern("/You have successfully logged out/", $results);
         $this->assertPattern("/Log In/", $results);
+    }
+
+    public function testOfThinkUpLLCRedirect() {
+        $this->simulateLogin('me@example.com');
+        $config = Config::getInstance();
+        $config->setValue('thinkupllc_endpoint', 'http://example.com/user/');
+
+        $controller = new LogoutController(true);
+        $result = $controller->go();
+
+        $this->assertEqual($controller->redirect_destination, 'http://example.com/user/logout.php');
     }
 }

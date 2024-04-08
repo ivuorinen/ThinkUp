@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/plugins/twitter/model/class.TwitterInstanceMySQLDAO.php
  *
- * Copyright (c) 2011-2013 Gina Trapani
+ * Copyright (c) 2011-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -22,7 +22,7 @@
  *
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2011-2013 Gina Trapani
+ * @copyright 2011-2016 Gina Trapani
  */
 class TwitterInstanceMySQLDAO extends InstanceMySQLDAO implements InstanceDAO {
 
@@ -35,8 +35,8 @@ class TwitterInstanceMySQLDAO extends InstanceMySQLDAO implements InstanceDAO {
     public function insert($network_user_id, $network_username, $network = "twitter", $viewer_id = false) {
         $id = parent::insert($network_user_id, $network_username, $network, $viewer_id);
         $q  = "INSERT INTO ".$this->getMetaTableName()." ";
-        $q .= "(id) ";
-        $q .= "VALUES (:instance_id) ";
+        $q .= "(id, last_reply_id) ";
+        $q .= "VALUES (:instance_id, '') ";
         $vars = array(
             ':instance_id'=>$id
         );
@@ -86,25 +86,24 @@ class TwitterInstanceMySQLDAO extends InstanceMySQLDAO implements InstanceDAO {
     private function insertMetaData($instance_object) {
         $q  = "INSERT INTO ".$this->getMetaTableName()." ";
         $q .= "(id, ";
-        $lfi = ($instance_object->last_favorite_id != "" ? true : false);
-        if ($lfi){
+        $has_last_fav_id = ($instance_object->last_favorite_id != "" ? true : false);
+        if ($has_last_fav_id){
             $q .= "last_favorite_id, ";
         }
-        $q .= "last_page_fetched_replies, last_page_fetched_tweets) ";
+        $q .= "last_reply_id, last_follower_id_cursor) ";
         $q .= "VALUES (:instance_id, ";
-        if ($lfi){
+        if ($has_last_fav_id){
             $q .= ":last_favorite_id, ";
         }
-        $q .= ":last_page_fetched_replies, :last_page_fetched_tweets) ";
+        $q .= ":last_reply_id, :last_follower_id_cursor) ";
         $vars = array(
             ':instance_id'                  => $instance_object->id,
             ':last_favorite_id'             => $instance_object->last_favorite_id,
-            ':last_page_fetched_replies'    => isset($instance_object->last_page_fetched_replies)?
-        $instance_object->last_page_fetched_replies:1,
-            ':last_page_fetched_tweets'     => isset($instance_object->last_page_fetched_tweets)?
-        $instance_object->last_page_fetched_tweets:1,
+            ':last_reply_id'                => isset($instance_object->last_reply_id)?
+                $instance_object->last_reply_id:'',
+            ':last_follower_id_cursor'      => $instance_object->last_follower_id_cursor,
         );
-        if (!$lfi){
+        if (!$has_last_fav_id){
             unset ($vars[':last_favorite_id']);;
         }
         $ps = $this->execute($q, $vars);
@@ -117,24 +116,23 @@ class TwitterInstanceMySQLDAO extends InstanceMySQLDAO implements InstanceDAO {
      * @return int Number of affected rows
      */
     private function updateMetaData($instance_object) {
-        $lfi = ($instance_object->last_favorite_id != "" ? true : false);
-        isset($instance_object->last_page_fetched_replies)?$instance_object->last_page_fetched_replies:1;
+        $has_last_fav_id = ($instance_object->last_favorite_id != "" ? true : false);
+        isset($instance_object->last_reply_id)?$instance_object->last_reply_id:1;
         $q  = "UPDATE ".$this->getMetaTableName()." SET ";
-        if ($lfi){
-            $q .= "last_favorite_id = :lastfavid, ";
+        if ($has_last_fav_id){
+            $q .= "last_favorite_id = :last_fav_id, ";
         }
-        $q .= "last_page_fetched_replies = :lpfr, ";
-        $q .= "last_page_fetched_tweets = :lpft ";
+        $q .= "last_reply_id = :last_reply_id,  last_follower_id_cursor = :last_follower_id_cursor ";
         $q .= "WHERE id=:id;";
 
         $vars = array(
-            ':lastfavid'     => $instance_object->last_favorite_id,
-            ':lpfr'         => $instance_object->last_page_fetched_replies,
-            ':lpft'         => $instance_object->last_page_fetched_tweets,
-            ':id'           => $instance_object->id
+            ':last_fav_id'      => $instance_object->last_favorite_id,
+            ':last_reply_id'    => $instance_object->last_reply_id,
+            ':last_follower_id_cursor'    => $instance_object->last_follower_id_cursor,
+            ':id'               => $instance_object->id
         );
-        if (!$lfi){
-            unset ($vars[':lastfavid']);;
+        if (!$has_last_fav_id){
+            unset ($vars[':last_fav_id']);;
         }
         $ps = $this->execute($q, $vars);
         return $this->getUpdateCount($ps);

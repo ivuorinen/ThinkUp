@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/WebTestOfCSRFToken.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -23,7 +23,7 @@
  *
  * @author Mark Wilkie <mwilkie[at]gmail[dot]com>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  */
 require_once dirname(__FILE__).'/init.tests.php';
 require_once THINKUP_WEBAPP_PATH.'_lib/extlib/simpletest/autorun.php';
@@ -70,19 +70,15 @@ class WebTestOfCSRFToken extends ThinkUpWebTestCase {
         $this->assertPattern("/var csrf_token = '" . self::TEST_CSRF_TOKEN . "';/");
 
         // look for password form token
-        $this->assertPattern('/<input name="oldpass" type="password" id="oldpass">'.
-        '<input type="hidden" name="csrf_token" value="'. self::TEST_CSRF_TOKEN.'" \/>/');
+        $this->assertPattern('/<input type="password" class="form-control"/');
+        $this->assertPattern('/<input type="hidden" name="csrf_token" value="'. self::TEST_CSRF_TOKEN.'" \/>/');
 
         // look for invite token
         $this->assertPattern('/<input type="hidden" name="csrf_token" value="'. self::TEST_CSRF_TOKEN .'" \/>' .
         '<input type="submit" id="login-save" name="invite"/');
 
-        // look for js ajax data tokens
-        $this->assertPattern('/&p=1&csrf_token=" \+ window.csrf_token; \/\/ toggle public on/');
-        $this->assertPattern('/&p=0&csrf_token=" \+ window.csrf_token; \/\/ toggle public off/');
-        $this->assertPattern('/&p=1&csrf_token=" \+ window.csrf_token; \/\/ toggle active on/');
-        $this->assertPattern('/&p=0&csrf_token=" \+ window.csrf_token; \/\/ toggle active off/');
-        $this->assertPattern('/&a=1&csrf_token=" \+ window.csrf_token; \/\/ toggle owner active on/');
-        $this->assertPattern('/&a=0&csrf_token=" \+ window.csrf_token; \/\/ toggle owner active off/');
+        // look for settings js
+        $this->assertPattern('/var csrf_token/');
+        $this->assertPattern('/settings.js/');
     }
 }

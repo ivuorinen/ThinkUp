@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/controller/class.ExportServiceUserDataController.php
  *
- * Copyright (c) 2011-2013 Gina Trapani
+ * Copyright (c) 2011-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -94,9 +94,7 @@ This zip archive contains all the data related to a specific service user gather
                 $owner_dao = DAOFactory::getDAO('OwnerDAO');
                 $owner = $owner_dao->getByEmail($this->getLoggedInUser());
                 $this->addToView('instances', $instance_dao->getByOwner($owner));
-                $this->addInfoMessage('Choose a user\'s data to export. '.
-                '(You\'ll find a README.txt file in the zip archive with instructions on how to import the data '.
-                'into another ThinkUp database.)' );
+                $this->addInfoMessage('Choose a user to export.');
             }
         }
         return $this->generateView();
@@ -126,7 +124,7 @@ Commands to run:
 
             self::exportPostsRepliesRetweetsFavoritesMentions($username, $user_id, $service);
             self::exportFollowsAndFollowers($user_id, $service);
-            self::exportFollowerCountHistory($user_id, $service);
+            self::exportCountHistory($user_id, $service);
             return true;
         } catch(Exception $e) {
             $err = $e->getMessage();
@@ -294,17 +292,17 @@ Commands to run:
         self::appendToReadme($import_instructions);
     }
 
-    protected function exportFollowerCountHistory($user_id, $network) {
+    protected function exportCountHistory($user_id, $network) {
         //just the max of each day's count
-        $follower_count_table_file = FileDataManager::getBackupPath('follower_count.tmp');
+        $count_history_table_file = FileDataManager::getBackupPath('count_history.tmp');
 
         $export_dao = DAOFactory::getDAO('ExportDAO');
-        $export_dao->exportFollowerCountToFile($user_id, $network, $follower_count_table_file);
+        $export_dao->exportCountHistoryToFile($user_id, $network, $count_history_table_file);
 
-        $this->files_to_zip[] = array('path'=>$follower_count_table_file, 'name'=>'follower_count.tmp');
+        $this->files_to_zip[] = array('path'=>$count_history_table_file, 'name'=>'count_history.tmp');
 
-        $import_instructions = "LOAD DATA INFILE '/your/path/to/follower_count.tmp' ";
-        $import_instructions .= "IGNORE INTO TABLE tu_follower_count;
+        $import_instructions = "LOAD DATA INFILE '/your/path/to/count_history.tmp' ";
+        $import_instructions .= "IGNORE INTO TABLE tu_count_history;
 
 ";
         self::appendToReadme($import_instructions);

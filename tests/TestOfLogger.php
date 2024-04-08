@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/TestOfLogger.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -23,7 +23,7 @@
  *
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  */
 require_once dirname(__FILE__).'/init.tests.php';
 require_once THINKUP_WEBAPP_PATH.'_lib/extlib/simpletest/autorun.php';
@@ -217,16 +217,16 @@ class TestOfLogger extends ThinkUpBasicUnitTestCase {
         $messages = null;
         $messages = file($config->getValue('log_location'));
 
-        $this->assertPattern('/<td class="crawl-log-component">TestOfLogger: <\/td> <td class="control-group '.
+        $this->assertPattern('/<td class="crawl-log-component">TestOfLogger: <\/td> <td class="form-group '.
         'warning">This is a user info message<\/td>/i',
         $messages[sizeof($messages) - 4]);
-        $this->assertPattern('/<td class="crawl-log-component">TestOfLogger: <\/td> <td class="control-group error">'.
+        $this->assertPattern('/<td class="crawl-log-component">TestOfLogger: <\/td> <td class="form-group error">'.
         'This is a user error message<\/td>/i',
         $messages[sizeof($messages) - 3]);
-        $this->assertPattern('/<td class="crawl-log-component">TestOfLogger: <\/td> <td class="control-group error"'.
+        $this->assertPattern('/<td class="crawl-log-component">TestOfLogger: <\/td> <td class="form-group error"'.
         '>This is an error message<\/td>/i',
         $messages[sizeof($messages) - 2]);
-        $this->assertPattern('/<td class="crawl-log-component">TestOfLogger: <\/td> <td class="control-group success">'.
+        $this->assertPattern('/<td class="crawl-log-component">TestOfLogger: <\/td> <td class="form-group success">'.
         'This is a user success message<\/td>/i',
         $messages[sizeof($messages) - 1]);
 

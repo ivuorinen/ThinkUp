@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/TestOfToggleOwnerAdminController.php
  *
- * Copyright (c) 2011-2013 Gina Trapani
+ * Copyright (c) 2011-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -23,7 +23,7 @@
  *
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2011-2013 Gina Trapani
+ * @copyright 2011-2016 Gina Trapani
  */
 require_once dirname(__FILE__).'/init.tests.php';
 require_once THINKUP_WEBAPP_PATH.'_lib/extlib/simpletest/autorun.php';
@@ -47,10 +47,7 @@ class TestOfToggleOwnerAdminController extends ThinkUpUnitTestCase {
     public function testNotLoggedIn() {
         $controller = new ToggleOwnerAdminController(true);
         $results = $controller->go();
-        $v_mgr = $controller->getViewManager();
-        $config = Config::getInstance();
-        $this->assertEqual('You must <a href="'.$config->getValue('site_root_path').
-        'session/login.php">log in</a> to do this.', $v_mgr->getTemplateDataItem('error_msg'));
+        $this->assertPattern( '/session\/login.php\?redirect\=/', $controller->redirect_destination);
     }
 
     public function testNotAnAdmin() {

@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/install/setmode.php
  *
- * Copyright (c) 2011-2013 Gina Trapani
+ * Copyright (c) 2011-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -23,16 +23,16 @@
  *
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2011-2013 Gina Trapani
+ * @copyright 2011-2016 Gina Trapani
  */
-session_start();
+
 if (strtolower($_GET['m']) == "tests") {
     putenv("MODE=TESTS");
-    $_SESSION["MODE"] = "TESTS";
+    setcookie('TU_MODE', 'TESTS', 0, '/');
     echo "Set to tests mode";
 } elseif (strtolower($_GET['m']) == "prod") {
     putenv("MODE=PROD");
-    $_SESSION["MODE"] = "PROD";
+    setcookie('TU_MODE', 'PROD', 0, '/');
     echo "Set to prod mode";
 } else {
     echo "Currently in ";

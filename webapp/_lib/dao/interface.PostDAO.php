@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/model/interface.PostDAO.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -24,7 +24,7 @@
  * Post Data Access Object interface
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  *
  */
@@ -281,6 +281,15 @@ interface PostDAO {
     $iterator=false, $is_public = false);
 
     /**
+     * Get all posts by a given user since January 1st as an Iterator
+     *
+     * @param str $author_id The ID of the author to search for.
+     * @param str $network The network of the user to search for.
+     * @return Iterator Posts Iterator
+     */
+    public function getThisYearOfPostsIterator($author_id, $network);
+
+    /**
      * Get all posts by an author given an author ID
      * @param str $author_id
      * @param str  $network
@@ -368,12 +377,12 @@ interface PostDAO {
      * @param bool $public Public mentions only, defaults to false
      * @param bool $include_rts Whether or not to include retweets. Defaults to true.
      * @param str $order_by The database column to order the results by.
-     * @param str $direction The direction with which to order the results. Defaults
-     * to "DESC".
+     * @param str $direction The direction with which to order the results. Defaults to "DESC".
+     * @param bool $iterator Should this return an iterator.  Defaults to false.
      * @return array of Post objects with author and link set
      */
     public function getAllMentionsInRange($author_username, $count, $network = "twitter", $from, $until, $page=1,
-    $public=false, $include_rts = true, $order_by = 'pub_date', $direction = 'DESC');
+    $public=false, $include_rts = true, $order_by = 'pub_date', $direction = 'DESC', $iterator = false);
 
     /**
      * Get all replies to a given user ID
@@ -401,11 +410,12 @@ interface PostDAO {
      * @param str $direction The direction with which to order the results. Defaults
      * to "DESC".
      * @param bool $is_public Whether or not the result of the method call will be displayed publicly. Defaults to
+     * @param bool $iterator Should this return an iterator.  Defaults to false.
      * false.
      * @return array Posts with author and link set
      */
     public function getAllRepliesInRange($user_id, $network, $count, $from, $until, $page = 1, $order_by = 'pub_date',
-    $direction = 'DESC', $is_public = false);
+    $direction = 'DESC', $is_public = false, $iterator = false);
 
     /**
      * Get posts by a user ordered by reply count desc
@@ -621,6 +631,26 @@ interface PostDAO {
     public function getAverageRetweetCount($username, $network, $last_x_days, $since=null);
 
     /**
+     * Get the average fave count over the last X days
+     * @param $username
+     * @param $network
+     * @param $last_x_days
+     * @param $since Date to calculate from defaults to today
+     * @return int Average retweet count over the last X days
+     */
+    public function getAverageFaveCount($username, $network, $last_x_days, $since=null);
+
+    /**
+     * Get the average reply count over the last X days
+     * @param $username
+     * @param $network
+     * @param $last_x_days
+     * @param $since Date to calculate from defaults to today
+     * @return int Average reply count over the last X days
+     */
+    public function getAverageReplyCount($username, $network, $last_x_days, $since=null);
+
+    /**
      * Get posts from this day in every year except this one that aren't replies or reshares/retweets.
      * @param str $author_id
      * @param str $network
@@ -682,6 +712,24 @@ interface PostDAO {
      */
     public function doesUserHavePostsWithRetweetsSinceDate($author_username, $network, $last_x_days, $since=null);
 
+    /** Check if user has any posts with faves on or before since_date minus last_x_days
+     * @param str $author_username
+     * @param str $network
+     * @param int $last_x_days
+     * @param str $since Date in Y-m-d format
+     * @return bool
+     */
+    public function doesUserHavePostsWithFavesSinceDate($author_username, $network, $last_x_days, $since=null);
+
+    /** Check if user has any posts with replies on or before since_date minus last_x_days
+     * @param str $author_username
+     * @param str $network
+     * @param int $last_x_days
+     * @param str $since Date in Y-m-d format
+     * @return bool
+     */
+    public function doesUserHavePostsWithRepliesSinceDate($author_username, $network, $last_x_days, $since=null);
+
     /**
      * Get users who have have retweeted a specified post and have a higher follower count than a given threshold.
      * @param unknown_type $post_id
@@ -690,6 +738,24 @@ interface PostDAO {
      * @return array User
      */
     public function getRetweetsByAuthorsOverFollowerCount($post_id, $network, $follower_count_threshold);
+
+    /**
+     * Get the number of days since a user last replied to a specified recipient.
+     * @param int $user_id
+     * @param int $recipient_id
+     * @param str $network
+     * @return int
+     */
+    public function getDaysAgoSinceUserRepliedToRecipient($user_id, $recipient_id, $network);
+
+    /**
+     * Get the total number of posts by a user.
+     * @param int $author_id
+     * @param str $network
+     * @param int $days_ago
+     * @return int posts count
+     */
+    public function countAllPostsByUserSinceDaysAgo($author_id, $network, $days_ago=7);
 
     /**
      * Search a service users's posts.
@@ -716,6 +782,7 @@ interface PostDAO {
     public function getAllPostsByHashtagId($hashtag_id, $network, $count, $order_by="pub_date", $direction="DESC",
     $page=1, $is_public = false);
 
+
     /**
      * Delete Posts given a hashtag_id
      * @param str $hashtag_id
@@ -733,4 +800,88 @@ interface PostDAO {
      * @return arr of Post objects
      */
     public function searchPostsByHashtag($keywords, Hashtag $hashtag, $network, $page_number=1, $page_count=20);
+
+    /**
+     * Return days user posted the most frequently
+     * @param str $author_username
+     * @param str $network
+     * @param int $in_last_x_days
+     * @param int $limit
+     * @return arr of rows with pub_date and associated post_count
+     */
+    public function getMostTalkativeDays($author_username, $network='twitter',
+        $in_last_x_days=0, $limit=3, $since=null);
+
+    /**
+     * Get all posts by a given user with configurable order by field and direction
+     * @param str $author_username
+     * @param str $network Default "twitter"
+     * @param Date $date
+     * @return array Posts with link object set
+     */
+    public function getAllPostsByUsernameOn($author_username, $network="twitter", $date);
+
+    /**
+     * Get all posts by a given user with configurable order by field and direction.
+     * @param str $author_username
+     * @param str $network Default "twitter"
+     * @param int|bool $count False if no limit (ie, return all rows)
+     * @param str $order_by field name Default "pub_date"
+     * @param bool $iterator
+     * @param str $in_last_x_days
+     * @param bool $is_public
+     * @param str $since
+     * @return array Posts with link object set
+     */
+    public function getAllPostsByUsernameOrderedBy($author_username, $network="twitter", $count=0,
+        $order_by="pub_date", $in_last_x_days = 0, $iterator = false, $is_public = false, $since = null);
+
+    /**
+     * Get a PostIterator with links of all a user's posts this year, since January 1st.
+     * @param  str $author_id
+     * @param  str $network
+     * @return PostIterator
+     */
+    public function getThisYearOfPostsWithLinksIterator($author_id, $network);
+
+    /**
+     * Get the pub_date of the earliest post captured for an instance.
+     * @param  Instance $instance
+     * @return str
+     */
+    public function getEarliestCapturedPostPubDate(Instance $instance);
+
+    /**
+     * Get a user's "bestie", the user s/he replies to and gets replies from the most.
+     * @param  Instance $instance
+     * @param  int   $in_last_x_days
+     * @return array array('user_id', 'total_replies_from', 'total_replies_to', 'avatar')
+     */
+    public function getBestie(Instance $instance, $in_last_x_days);
+
+    /**
+     * Get the most recent post by a user with a link that has not yet been expanded.
+     * @param  Instance $instance
+     * @return str (or null, if there's no post)
+     */
+    public function getMostRecentUnexpandedLinkPubDate(Instance $instance);
+
+    /**
+     * Get a list of user_id/count pairs for users that were retweeted by user_id in the given time period
+     * @param int $user_id
+     * @param str $network
+     * @param str $from Start date
+     * @param str $until End date
+     * @return arr user_id/count pairs that $user_id retweetd
+     */
+    public function getRetweetsPerUserInRange($user_id, $network, $from, $until);
+
+    /**
+     * Get all posts by a given user with configurable order by field and direction
+     * @param str $author_username
+     * @param str $network
+     * @param Date $year
+     * @return array Row with year and total posts for that year
+     */
+    public function getPostCountForYear($author_username, $network, $year);
 }

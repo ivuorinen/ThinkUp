@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/all_controller_tests.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -23,7 +23,7 @@
  *
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  */
 include 'init.tests.php';
 require_once THINKUP_WEBAPP_PATH.'_lib/extlib/simpletest/autorun.php';
@@ -39,7 +39,6 @@ $controller_test_list = array(
 "TestOfCheckCrawlerController",
 "TestOfCheckVersionController",
 "TestOfCrawlerAuthController",
-"TestOfDashboardController",
 "TestOfInsightStreamController",
 "TestOfInsightAPIController",
 "TestOfThinkUpEmbedController",
@@ -47,13 +46,11 @@ $controller_test_list = array(
 "TestOfExportController",
 "TestOfExportServiceUserDataController",
 "TestOfForgotPasswordController",
-"TestOfGridController",
 "TestOfGridExportController",
 "TestOfInstallerController",
 "TestOfLoginController",
 "TestOfLogoutController",
 "TestOfPasswordResetController",
-"TestOfPostController",
 "TestOfRegisterController",
 "TestOfTestController",
 "TestOfTestAuthController",
@@ -62,12 +59,12 @@ $controller_test_list = array(
 "TestOfToggleActiveOwnerController",
 "TestOfToggleOwnerAdminController",
 "TestOfTogglePublicInstanceController",
-"TestOfUserController",
 "TestOfPluginOptionController",
 "TestOfTestAuthAPIController",
 "TestOfRSSController",
 "TestOfUpgradeDatabaseController",
 "TestOfPostAPIController",
+"TestOfSessionAPILoginController",
 "TestOfSearchController",
 "TestOfStreamerAuthController",
 "TestOfUpdateNowController",

@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/model/class.ExportMySQLDAO.php
  *
- * Copyright (c) 2011-2013 Gina Trapani
+ * Copyright (c) 2011-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -23,7 +23,7 @@
  * Export MySQL Data Access Object
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2011-2013 Gina Trapani
+ * @copyright 2011-2016 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  */
 
@@ -320,11 +320,11 @@ class ExportMySQLDAO extends PDODAO implements ExportDAO {
         self::dropExportedFollowsTable();
     }
 
-    public function exportFollowerCountToFile($user_id, $network, $file) {
+    public function exportCountHistoryToFile($user_id, $network, $file) {
         if (file_exists($file)) {
             unlink($file);
         }
-        $q = "SELECT * INTO OUTFILE '$file' FROM #prefix#follower_count WHERE ";
+        $q = "SELECT * INTO OUTFILE '$file' FROM #prefix#count_history WHERE ";
         $q .= "network=:network AND network_user_id=:user_id GROUP by date;";
         $vars = array(
             ':user_id'=>$user_id,

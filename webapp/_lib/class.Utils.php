@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/class.Utils.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -25,7 +25,7 @@
  *
  * Generic, reusable, common utility methods
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  *
  */
@@ -239,27 +239,12 @@ class Utils {
 
     /**
      * Validate email address
-     * This method uses a raw regex instead of filter_var because as of PHP 5.3.3,
-     * filter_var($email, FILTER_VALIDATE_EMAIL) validates local email addresses.
-     * From 5.2 to 5.3.3, it does not.
-     * Therefore, this method uses the PHP 5.2 regex instead of filter_var in order to return consistent results
-     * regardless of PHP version.
-     * http://svn.php.net/viewvc/php/php-src/trunk/ext/filter/logical_filters.c?r1=297250&r2=297350
      *
      * @param str $email Email address to validate
      * @return bool Whether or not it's a valid address
      */
     public static function validateEmail($email = '') {
-        //return filter_var($email, FILTER_VALIDATE_EMAIL));
-        $reg_exp = "/^((\\\"[^\\\"\\f\\n\\r\\t\\b]+\\\")|([A-Za-z0-9_][A-Za-z0-9_\\!\\#\\$\\%\\&\\'\\*\\+\\-\\~\\".
-        "/\\=\\?\\^\\`\\|\\{\\}]*(\\.[A-Za-z0-9_\\!\\#\\$\\%\\&\\'\\*\\+\\-\\~\\/\\=\\?\\^\\`\\|\\{\\}]*)*))@((\\".
-        "[(((25[0-5])|(2[0-4][0-9])|([0-1]?[0-9]?[0-9]))\\.((25[0-5])|(2[0-4][0-9])|([0-1]?[0-9]?[0-9]))\\.".
-        "((25[0-5])|(2[0-4][0-9])|([0-1]?[0-9]?[0-9]))\\.((25[0-5])|(2[0-4][0-9])|([0-1]?[0-9]?[0-9])))\\])|".
-        "(((25[0-5])|(2[0-4][0-9])|([0-1]?[0-9]?[0-9]))\\.((25[0-5])|(2[0-4][0-9])|([0-1]?[0-9]?[0-9]))\\.".
-        "((25[0-5])|(2[0-4][0-9])|([0-1]?[0-9]?[0-9]))\\.((25[0-5])|(2[0-4][0-9])|([0-1]?[0-9]?[0-9])))|".
-        "((([A-Za-z0-9])(([A-Za-z0-9\\-])*([A-Za-z0-9]))?(\\.(?=[A-Za-z0-9\\-]))?)+[A-Za-z]+))$/D";
-        //return (preg_match($reg_exp, $email) === false)?false:true;
-        return (preg_match($reg_exp, $email)>0)?true:false;
+        return filter_var($email, FILTER_VALIDATE_EMAIL);
     }
 
     /**
@@ -279,7 +264,7 @@ class Utils {
      * @return str
      */
     public static function getSiteRootPathFromFileSystem() {
-        $dirs_under_root = array('account', 'post', 'session', 'user', 'install', 'tests', 'crawler');
+        $dirs_under_root = array('account', 'post', 'session', 'user', 'install', 'tests', 'crawler', '2014', '2015');
         if (isset($_SERVER['PHP_SELF'])) {
             $current_script_path = explode('/', $_SERVER['PHP_SELF']);
         } else {
@@ -289,8 +274,76 @@ class Utils {
         if ( in_array( end($current_script_path), $dirs_under_root ) ) {
             array_pop($current_script_path);
         }
+        // Account for API calls
+        if ( end($current_script_path) == 'v1' ) {
+            array_pop($current_script_path);
+            if ( end($current_script_path) == 'api' ) {
+                array_pop($current_script_path);
+            }
+        }
         $current_script_path = implode('/', $current_script_path) . '/';
         return $current_script_path;
+    }
+
+    /**
+     * Wrapper for $_SERVER['REQUEST_URI'] that accounts for site_root_path.
+     * Returns the request URI for a ThinkUp file relative to site_root_path.
+     * For example, if the request is http://example.com/mythinkup/account/user.php, this will return
+     * account/user.php.
+     * Use this instead of directly referencing $_SERVER['REQUEST_URI'] to account for web server forwards, symlinks,
+     * and other tomfoolery.
+     * @return str
+     */
+    public static function getApplicationRequestURI() {
+        $dirs_under_root = array('account', 'post', 'session', 'user', 'install', 'tests', 'crawler');
+        if (isset($_SERVER['REQUEST_URI'])) {
+            $current_script_path = explode('/', $_SERVER['REQUEST_URI']);
+        } else {
+            $current_script_path = array();
+        }
+        $req_url = array();
+        $req_url[] = array_pop($current_script_path);
+        if ( in_array( end($current_script_path), $dirs_under_root ) ) {
+            $req_url[] = array_pop($current_script_path);
+        }
+        // Account for API calls
+        if ( end($current_script_path) == 'v1' ) {
+            $req_url[] = array_pop($current_script_path);
+            if ( end($current_script_path) == 'api' ) {
+                $req_url[] = array_pop($current_script_path);
+            }
+        }
+        $req_url = implode('/', array_reverse($req_url));
+        return $req_url;
+    }
+
+    /**
+     * Get the application's host name or server name, i.e., example.com.
+     * @return str Host name either set by PHP global vars or stored in the database
+     */
+    public static function getApplicationHostName() {
+        //First attempt to get the host name without querying the database
+        //Try SERVER_NAME
+        $server = empty($_SERVER['SERVER_NAME']) ? '' : $_SERVER['SERVER_NAME'];
+        //Second, try HTTP_HOST
+        if ($server == '' ) {
+            $server = empty($_SERVER['HTTP_HOST']) ? '' : $_SERVER['HTTP_HOST'];
+        }
+        //Finally fall back to stored application setting set by Installer::storeServerName
+        if ($server == '') {
+            $option_dao = DAOFactory::getDAO('OptionDAO');
+            try {
+                $server_app_setting = $option_dao->getOptionByName(OptionDAO::APP_OPTIONS, 'server_name');
+                if (isset($server_app_setting)) {
+                    $server = $server_app_setting->option_value;
+                }
+            } catch (PDOException $e) {
+                //If retrieving the option doesn't work (ie, the options table doesn't exist), do nothing
+            }
+        }
+        //domain name is always lowercase
+        $server = strtolower($server);
+        return $server;
     }
 
     /**
@@ -299,26 +352,10 @@ class Utils {
      * @return str
      */
     public static function getApplicationURL($replace_localhost_with_ip = false) {
-        //First attempt to get the host name without querying the database
-        //Try SERVER_NAME
-        $server = empty($_SERVER['SERVER_NAME']) ? '' : $_SERVER['SERVER_NAME'];
-        //Try HTTP_HOST
-        if ($server == '' ) {
-            $server = empty($_SERVER['HTTP_HOST']) ? '' : $_SERVER['HTTP_HOST'];
-        }
-        //Then fall back to stored application setting set by Installer::storeServerName
-        if ($server == '') {
-            $option_dao = DAOFactory::getDAO('OptionDAO');
-            $server_app_setting = $option_dao->getOptionByName(OptionDAO::APP_OPTIONS, 'server_name');
-            if (isset($server_app_setting)) {
-                $server = $server_app_setting->option_value;
-            }
-        }
+        $server = self::getApplicationHostName();
         if ($replace_localhost_with_ip) {
             $server = ($server == 'localhost')?'127.0.0.1':$server;
         }
-        //domain name is always lowercase
-        $server = strtolower($server);
         $site_root_path = Config::getInstance()->getValue('site_root_path');
         if (!isset($site_root_path)) { //config file not written yet (during install)
             $site_root_path = self::getSiteRootPathFromFileSystem();
@@ -451,5 +488,53 @@ class Utils {
         } else {
             return date($format,strtotime("last Saturday",$offset));
         }
+    }
+    /**
+     * Return whether currently in test mode.
+     * @return bool Whether in test mode
+     */
+    public static function isTest() {
+        return (getenv("MODE")=="TESTS" || (isset($_COOKIE['TU_MODE']) && $_COOKIE['TU_MODE']=='TESTS'));
+    }
+
+    /**
+     * Check if ThinkUp LLC endpoint is set in the configuration file.
+     * @return bool
+     */
+    public static function isThinkUpLLC() {
+        $cfg = Config::getInstance();
+        $thinkupllc_endpoint = $cfg->getValue('thinkupllc_endpoint');
+        return ($thinkupllc_endpoint !== null);
+    }
+
+    /**
+     * Remove URLs from a block of text.
+     * @param  str $text Text with URLs in it
+     * @return str Text without URLs in it
+     */
+    public static function stripURLsOutOfText($text) {
+        return preg_replace('/\b(https?):\/\/[-A-Z0-9+&@#\/%?=~_|$!:,.;]*[A-Z0-9+&@#\/%=~_|$]/i', '', $text);
+    }
+
+    /**
+     * Use PorterStemmer library to stem a word.
+     * @param str $word The word to stem.
+     * @return str The stemmed word
+     */
+    public static function stemWord($word) {
+        require_once(THINKUP_WEBAPP_PATH.'_lib/extlib/Stemmer/class.PorterStemmer.php');
+        return PorterStemmer::Stem($word);
+    }
+
+    /**
+     * Calculate popularity of post.
+     * @param Post $post
+     * @return int $popularity_index The popularity index of this post
+     */
+    public static function getPopularityIndex(Post $post) {
+        return
+            (5 * $post->reply_count_cache) +
+            (3 * $post->retweet_count_cache) +
+            (2 * $post->favlike_count_cache);
     }
 }

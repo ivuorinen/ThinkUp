@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/TestOfTestAuthAPIController.php
  *
- * Copyright (c) 2009-2013 Gina Trapani, Guillaume Boudreau
+ * Copyright (c) 2009-2016 Gina Trapani, Guillaume Boudreau
  *
  * LICENSE:
  *
@@ -23,7 +23,7 @@
  * Test of TestAuthAPIController
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani, Guillaume Boudreau
+ * @copyright 2009-2016 Gina Trapani, Guillaume Boudreau
  * @author Guillaume Boudreau <gboudreau@pommepause.com>
  *
  */
@@ -54,15 +54,12 @@ class TestOfTestAuthAPIController extends ThinkUpUnitTestCase {
         // No username, no API secret provided
         // This isn't an API call, so present HTML error output
         $results = $controller->go();
-        $this->assertPattern('/You must <a href="'.$escaped_site_root_path.
-        'session\/login.php">log in<\/a> to do this./', $results);
-
+        $this->assertPattern( '/session\/login.php\?redirect\=/', $controller->redirect_destination);
         // No API secret provided
         // This isn't an API call, so present HTML error output
         $_GET['un'] = 'me@example.com';
         $results = $controller->go();
-        $this->assertPattern('/You must <a href="'.$escaped_site_root_path.
-        'session\/login.php">log in<\/a> to do this./', $results);
+        $this->assertPattern( '/session\/login.php\?redirect\=/', $controller->redirect_destination);
 
         // Wrong API secret provided
         $_GET['as'] = 'fail_me';
@@ -97,8 +94,9 @@ class TestOfTestAuthAPIController extends ThinkUpUnitTestCase {
         // And just to make sure, if we 'logout', we should be denied access now
         Session::logout();
         $results = $controller->go();
-        $this->assertPattern('/You must <a href="'.$escaped_site_root_path.
-        'session\/login.php">log in<\/a> to do this./', $results);
+        $this->assertPattern( '/ControllerAuthException/', $results);
+        $this->assertPattern( '/You must/', $results);
+        $this->assertPattern( '/log in/', $results);
     }
 
     public function testGetLoggedInUser() {

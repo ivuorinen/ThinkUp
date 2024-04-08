@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/install/cli/upgrade.php
  *
- * Copyright (c) 2009-2013 Mark Wilkie
+ * Copyright (c) 2009-2016 Mark Wilkie
  *
  * LICENSE:
  *
@@ -23,7 +23,7 @@
  * Command line interface for upgrading Thinkup/data
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Mark Wilkie
+ * @copyright 2009-2016 Mark Wilkie
  * @author Mark Wilkie <mwilkie[at]gmail[dot]com>
  */
 chdir(dirname(__FILE__) . '/../..');
@@ -57,14 +57,14 @@ try {
         exit;
     } else {
         if (!$no_version) {
-            print "\nThinkup needs to be upgraded to version $thinkup_db_version, proceed => [y|n] ";
+            print "\nThinkup needs to be upgraded to version $thinkup_db_version, proceed? => [y|n] ";
             $handle = fopen ("php://stdin","r");
             $line = fgets($handle);
             if (trim($line) != 'y'){
                 exit;
             }
         }
-        print "\nWould you like to backup your data first? => [y|n] ";
+        print "\nWould you like to back up your data first? => [y|n] ";
         $handle = fopen ("php://stdin","r");
         $line = fgets($handle);
         if (trim($line) == 'y'){
@@ -73,7 +73,7 @@ try {
                 print "\n    Error: ThinkUp backups require Zip support\n\n";
                 exit(1);
             }
-            print "\nEnter a .zip filename (/path/tp/backup.zip) => ";
+            print "\nEnter a .zip filename (/path/to/backup.zip) => ";
             $handle = fopen ("php://stdin","r");
             $line = fgets($handle);
             $filename = trim($line);

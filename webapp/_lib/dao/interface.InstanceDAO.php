@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/model/interface.InstanceDAO.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -24,7 +24,7 @@
  * Instance Data Access Object Interface
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  *
  */
@@ -145,6 +145,13 @@ interface InstanceDAO {
     public function getByOwner(Owner $owner, $force_not_admin = false, $only_active=false);
 
     /**
+     * Get instances by owner with authorization status messages.
+     * @param Owner $owner
+     * @return array Instance objects
+     */
+    public function getByOwnerWithStatus(Owner $owner);
+
+    /**
      * Get public instances
      * @return array Instance objects
      */
@@ -235,4 +242,12 @@ interface InstanceDAO {
      * @return int Count of updated instances
      */
     public function updateUsername($id, $username);
+
+    /**
+     * Sets the post archive loaded value to true
+     * @param str network_user_id
+     * @param str network
+     * @return int Count of updated instances
+     */
+    public function setPostArchiveLoaded($network_user_id, $network);
 }

@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/class.Installer.php
  *
- * Copyright (c) 2009-2013 Dwi Widiastuti, Gina Trapani
+ * Copyright (c) 2009-2016 Dwi Widiastuti, Gina Trapani
  *
  * LICENSE:
  *
@@ -25,7 +25,7 @@
  * A singleton class that doess the heavy lifting of installing ThinkUp.
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Dwi Widiastuti, Gina Trapani
+ * @copyright 2009-2016 Dwi Widiastuti, Gina Trapani
  * @author Dwi Widiastuti <admin[at]diazuwi[dot]web[dot]id>
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  */
@@ -142,7 +142,7 @@ class Installer {
      */
     public function checkVersion($ver = '') {
         // when testing
-        if ( defined('TESTS_RUNNING') && TESTS_RUNNING && !empty($ver) ) {
+        if ( Utils::isTest() && !empty($ver) ) {
             $version = $ver;
         } else {
             $version = PHP_VERSION;
@@ -207,7 +207,7 @@ class Installer {
             $ret['ZipArchive'] = true;
         }
         // when testing
-        if ( defined('TESTS_RUNNING') && TESTS_RUNNING && !empty($libs) ) {
+        if ( Utils::isTest() && !empty($libs) ) {
             $ret = $libs;
         }
         return $ret;
@@ -248,7 +248,7 @@ class Installer {
         }
 
         // when testing
-        if ( defined('TESTS_RUNNING') && TESTS_RUNNING && !empty($perms) ) {
+        if ( Utils::isTest() && !empty($perms) ) {
             $ret = $perms;
         }
         return $ret;
@@ -304,7 +304,7 @@ class Installer {
         $writable_session_permission = $this->isSessionDirectoryWritable();
 
         // when testing
-        if ( defined('TESTS_RUNNING') && TESTS_RUNNING && !empty($pass) ) {
+        if ( Utils::isTest() && !empty($pass) ) {
             $ret = $pass;
         } else {
             $ret = ($version_compat && $lib_depends_ret && $writable_permission_ret && $writable_session_permission);
@@ -457,7 +457,7 @@ class Installer {
         // check version is met
         $version_met = self::checkStep1();
         // when testing
-        if ( defined('TESTS_RUNNING') && TESTS_RUNNING && !empty($pass) ) {
+        if ( Utils::isTest() && !empty($pass) ) {
             $version_met = $pass;
         }
         if ( !$version_met ) {
@@ -504,7 +504,11 @@ class Installer {
      * @return string
      */
     private function getInstallQueries($table_prefix) {
-        $query_file = THINKUP_WEBAPP_PATH . 'install/sql/build-db_mysql.sql';
+        if ((isset($_SESSION["MODE"]) && $_SESSION["MODE"] == "TESTS") || getenv("MODE")=="TESTS") {
+            $query_file = THINKUP_WEBAPP_PATH . 'install/sql/build-db_mysql-upcoming-release.sql';
+        } else {
+            $query_file = THINKUP_WEBAPP_PATH . 'install/sql/build-db_mysql.sql';
+        }
         if ( !file_exists($query_file) ) {
             throw new InstallerException("File <code>$query_file</code> is not found.", self::ERROR_FILE_NOT_FOUND);
         }
@@ -629,11 +633,15 @@ class Installer {
             } else {
                 /* write the config file */
                 $handle = fopen($config_file, 'w');
-                foreach( $new_config_file_contents as $line ) {
-                    fwrite($handle, $line);
+                if ($handle !== false ) {
+                    foreach( $new_config_file_contents as $line ) {
+                        fwrite($handle, $line);
+                    }
+                    fclose($handle);
+                    return true;
+                } else {
+                    return false;
                 }
-                fclose($handle);
-                return true;
             }
         }
     }
@@ -756,7 +764,11 @@ class Installer {
      */
     public function getTablesToInstall() {
         $table_names = array();
-        $install_queries = file_get_contents(THINKUP_WEBAPP_PATH."install/sql/build-db_mysql.sql");
+        if ((isset($_SESSION["MODE"]) && $_SESSION["MODE"] == "TESTS") || getenv("MODE")=="TESTS") {
+            $install_queries = file_get_contents(THINKUP_WEBAPP_PATH."install/sql/build-db_mysql-upcoming-release.sql");
+        } else {
+            $install_queries = file_get_contents(THINKUP_WEBAPP_PATH."install/sql/build-db_mysql.sql");
+        }
         $queries = explode(';', $install_queries);
         if ( $queries[count($queries)-1] == '' ) {
             array_pop($queries);
@@ -783,5 +795,41 @@ class Installer {
                 $option_dao->insertOption(OptionDAO::APP_OPTIONS, 'server_name', $server_name);
             }
         }
+    }
+
+    /**
+     * Returns an array of time zone options formatted for display in a select field.
+     *
+     * @return arr An associative array of options, ready for optgrouping.
+     */
+    public static function getTimeZoneList() {
+        $tz_options = timezone_identifiers_list();
+        $view_tzs = array();
+
+        foreach ($tz_options as $option) {
+            $option_data = explode('/', $option);
+
+            // don't allow user to select UTC
+            if ($option_data[0] == 'UTC') {
+                continue;
+            }
+
+            // handle things like the many Indianas
+            if (isset($option_data[2])) {
+                $option_data[1] = $option_data[1] . ': ' . $option_data[2];
+            }
+
+            //avoid undefined offset error
+            if (!isset($option_data[1])) {
+                $option_data[1] = $option_data[0];
+            }
+
+            $view_tzs[$option_data[0]][] = array(
+                'val' => $option,
+                'display' => str_replace('_', ' ', $option_data[1])
+            );
+        }
+
+        return $view_tzs;
     }
 }

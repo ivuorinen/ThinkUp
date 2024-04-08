@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/class.Reporter.php
  *
- * Copyright (c) 2012-2013 Gina Trapani
+ * Copyright (c) 2012-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -23,7 +23,7 @@
  *
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2012-2013 Gina Trapani
+ * @copyright 2012-2016 Gina Trapani
  */
 class Reporter {
     /**
@@ -47,8 +47,7 @@ class Reporter {
             $referer_url .= "?u=".urlencode($instance->network_username)."&n=". urlencode($instance->network);
         }
 
-        $in_test_mode =  ((isset($_SESSION["MODE"]) && $_SESSION["MODE"] == "TESTS") || getenv("MODE")=="TESTS");
-        if (!$in_test_mode) { //only make live request if we're not running the test suite
+        if (!Utils::isTest()) { //only make live request if we're not running the test suite
             //Make the cURL request
             $c = curl_init();
             curl_setopt($c, CURLOPT_URL, $report_back_url);

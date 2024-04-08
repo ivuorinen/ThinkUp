@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/model/class.FollowMySQLDAO.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -24,7 +24,7 @@
  * Follow MySQL Data Access Object Implementation
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  * @author Jason McPheron <jason[at]onebigword[dot]com>
  * @author Christoffer Viken <christoffer[at]viken[dot]me>
@@ -59,11 +59,12 @@ class FollowMySQLDAO extends PDODAO implements FollowDAO {
         return $this->getDataIsReturned($ps);
     }
 
-    public function update($user_id, $follower_id, $network, $debug_api_call = '') {
-        $q = " UPDATE #prefix#follows ";
-        $q .= "SET last_seen=NOW(), debug_api_call = :debug ";
+    public function update($user_id, $follower_id, $network, $active=true, $debug_api_call = '') {
+        $q = "UPDATE #prefix#follows ";
+        $q .= "SET last_seen=NOW(), active = :active, debug_api_call = :debug ";
         $q .= "WHERE user_id = :user_id AND follower_id = :follower_id AND network = :network;";
         $vars = array(
+            ':active'=>$this->convertBoolToDB($active),
             ':user_id'=>(string)$user_id,
             ':follower_id'=>(string)$follower_id,
             ':network'=>$network,
@@ -116,6 +117,23 @@ class FollowMySQLDAO extends PDODAO implements FollowDAO {
         $q .= " ORDER BY f.follower_id DESC LIMIT 100;";
         $vars = array(
             ':user_id'=>(string)$user_id,
+            ':network'=>$network
+        );
+        if ($this->profiler_enabled) { Profiler::setDAOMethod(__METHOD__); }
+        $ps = $this->execute($q, $vars);
+
+        return $this->getDataRowsAsArrays($ps);
+    }
+
+    public function getUnloadedFriendDetails($user_id, $network) {
+        $q  = "SELECT user_id FROM #prefix#follows AS f ";
+        $q .= "WHERE f.follower_id = :follower_id AND f.network=:network ";
+        $q .= "AND f.user_id NOT IN (SELECT user_id FROM #prefix#users WHERE network=:network) ";
+        $q .= "AND f.user_id NOT IN ";
+        $q .= "   (SELECT user_id FROM #prefix#user_errors WHERE network=:network) ";
+        $q .= " ORDER BY f.user_id DESC LIMIT 100;";
+        $vars = array(
+            ':follower_id'=>(string)$user_id,
             ':network'=>$network
         );
         if ($this->profiler_enabled) { Profiler::setDAOMethod(__METHOD__); }
@@ -191,10 +209,26 @@ class FollowMySQLDAO extends PDODAO implements FollowDAO {
 
     public function countTotalFriends($user_id, $network) {
         $q = "SELECT count(f.user_id) AS count FROM #prefix#follows AS f ";
-        $q .= "WHERE f.follower_id = :user_id AND f.network=:network ";
+        $q .= "WHERE f.follower_id = :user_id AND f.network=:network AND active=1 ";
         $vars = array(
             ':user_id'=>(string)$user_id,
             ':network'=>$network
+        );
+        if ($this->profiler_enabled) { Profiler::setDAOMethod(__METHOD__); }
+        $ps = $this->execute($q, $vars);
+
+        return $this->getDataCountResult($ps);
+    }
+
+    public function countTotalFriendsJoinedAfterDate($user_id, $network, $date) {
+        $q = "SELECT count( * ) AS count FROM #prefix#follows AS f ";
+        $q .= "INNER JOIN #prefix#users u ON u.user_id = f.user_id ";
+        $q .= "WHERE f.follower_id = :user_id AND u.joined>:date AND u.network=:network AND f.network = u.network ";
+        $q .= "AND f.active=1";
+        $vars = array(
+            ':user_id'=>(int)$user_id,
+            ':network'=>$network,
+            ':date'=>$date
         );
         if ($this->profiler_enabled) { Profiler::setDAOMethod(__METHOD__); }
         $ps = $this->execute($q, $vars);
@@ -216,29 +250,43 @@ class FollowMySQLDAO extends PDODAO implements FollowDAO {
         return $this->getDataCountResult($ps);
     }
 
-    public function getStalestFriend($user_id, $network) {
+    public function getStalestFriends($user_id, $network, $number_days_old=2, $limit=10) {
         $q  = "SELECT u.* FROM #prefix#users AS u ";
         $q .= "INNER JOIN #prefix#follows AS f ON f.user_id = u.user_id ";
-        $q .= "WHERE f.follower_id= :user_id AND f.network=:network ";
+        $q .= "WHERE f.follower_id= :user_id AND f.network=:network AND f.active=1 ";
         $q .= "AND u.user_id NOT IN ";
         $q .= "   (SELECT user_id FROM #prefix#user_errors WHERE network=:network) ";
-        $q .= "AND u.last_updated < DATE_SUB(NOW(), INTERVAL 1 DAY) ";
-        $q .= "ORDER BY u.last_updated ASC LIMIT 1;";
+        $q .= "AND u.last_updated < DATE_SUB(NOW(), INTERVAL :number_days_old DAY) ";
+        $q .= "ORDER BY u.last_updated ASC LIMIT :limit;";
         $vars = array(
             ':user_id'=>(string)$user_id,
-            ':network'=>$network
+            ':network'=>$network,
+            ':number_days_old'=>$number_days_old,
+            ':limit'=>$limit
         );
         if ($this->profiler_enabled) { Profiler::setDAOMethod(__METHOD__); }
         $ps = $this->execute($q, $vars);
 
-        return $this->getDataRowAsObject($ps, "User");
+        return $this->getDataRowsAsObjects($ps, "User");
     }
 
     public function getOldestFollow($network) {
         $q  = "SELECT user_id AS followee_id, follower_id, last_seen ";
         $q .= "FROM #prefix#follows AS f ";
-        $q .= "WHERE network=:network AND active = 1 ORDER BY f.last_seen ASC LIMIT 1;";
+        $q .= "WHERE network=:network AND active = 1 AND ";
+        $q .= "f.last_seen < DATE_SUB(NOW(), INTERVAL 2 DAY) ORDER BY f.last_seen ASC LIMIT 1;";
         $vars = array( ':network'=>$network );
+        if ($this->profiler_enabled) { Profiler::setDAOMethod(__METHOD__); }
+        $ps = $this->execute($q, $vars);
+        return $this->getDataRowAsArray($ps);
+    }
+
+    public function getOldestFriend($user_id, $network) {
+        $q  = "SELECT user_id AS followee_id, follower_id, last_seen ";
+        $q .= "FROM #prefix#follows AS f ";
+        $q .= "WHERE network=:network AND follower_id = :follower_id AND active = 1 AND ";
+        $q .= "f.last_seen < DATE_SUB(NOW(), INTERVAL 2 DAY) ORDER BY f.last_seen ASC LIMIT 1;";
+        $vars = array( ':network'=>$network, ':follower_id'=>$user_id );
         if ($this->profiler_enabled) { Profiler::setDAOMethod(__METHOD__); }
         $ps = $this->execute($q, $vars);
         return $this->getDataRowAsArray($ps);
@@ -330,7 +378,55 @@ class FollowMySQLDAO extends PDODAO implements FollowDAO {
         }
         $q .= "AND f.user_id = :user_id AND f.network=:network AND f.network=u.network AND active=1 ";
         $q .= "AND follower_count > 1000 AND friend_count > 0 AND friend_count < (follower_count/2) ";
-        $q .= "ORDER BY likelihood_of_follow ASC, u.follower_count DESC LIMIT :limit;";
+        $q .= "AND u.is_verified = 0 ORDER BY likelihood_of_follow ASC, u.follower_count DESC LIMIT :limit;";
+        if ($this->profiler_enabled) { Profiler::setDAOMethod(__METHOD__); }
+        $ps = $this->execute($q, $vars);
+        return $this->getDataRowsAsObjects($ps, 'User');
+    }
+
+    public function getVerifiedFollowersByDay($user_id, $network, $days_ago=0, $limit=10) {
+        $vars = array(
+            ':user_id'=>(string)$user_id,
+            ':network'=>$network,
+            ':days_ago'=>(int)$days_ago,
+            ':limit'=>(int)$limit
+        );
+        $q  = "SELECT u.* FROM #prefix#users AS u ";
+        $q .= "INNER JOIN #prefix#follows AS f ON u.user_id = f.follower_id ";
+        $q .= "WHERE f.first_seen >= date_sub(current_date, INTERVAL :days_ago day) ";
+        if ($days_ago > 0) {
+            $end_days_ago = $days_ago-1;
+            $q .= "AND f.first_seen <= date_sub(current_date, INTERVAL :end_days_ago day) ";
+            $vars['end_days_ago'] = $end_days_ago;
+        }
+        $q .= "AND f.user_id = :user_id AND f.network = :network AND u.network=f.network AND active=1 ";
+        $q .= "AND u.is_verified = 1 ";
+        $q .= "LIMIT :limit;";
+        if ($this->profiler_enabled) { Profiler::setDAOMethod(__METHOD__); }
+        $ps = $this->execute($q, $vars);
+        return $this->getDataRowsAsObjects($ps, 'User');
+    }
+
+
+    public function getFollowersFromLocationByDay($user_id, $network, $location, $days_ago=0, $limit=10) {
+        $vars = array(
+            ':user_id'=>(string)$user_id,
+            ':network'=>$network,
+            ':location'=>$location,
+            ':days_ago'=>(int)$days_ago,
+            ':limit'=>(int)$limit
+        );
+        $q  = "SELECT u.* FROM #prefix#users AS u ";
+        $q .= "INNER JOIN #prefix#follows AS f ON u.user_id = f.follower_id ";
+        $q .= "WHERE f.first_seen >= date_sub(current_date, INTERVAL :days_ago day) ";
+        if ($days_ago > 0) {
+            $end_days_ago = $days_ago-1;
+            $q .= "AND f.first_seen <= date_sub(current_date, INTERVAL :end_days_ago day) ";
+            $vars['end_days_ago'] = $end_days_ago;
+        }
+        $q .= "AND f.user_id = :user_id AND f.network = :network AND u.network=f.network AND active=1 ";
+        $q .= "AND u.location = :location ";
+        $q .= "LIMIT :limit;";
         if ($this->profiler_enabled) { Profiler::setDAOMethod(__METHOD__); }
         $ps = $this->execute($q, $vars);
         return $this->getDataRowsAsObjects($ps, 'User');
@@ -493,7 +589,45 @@ class FollowMySQLDAO extends PDODAO implements FollowDAO {
         return $this->getDataRowsAsArrays($ps);
     }
 
+    public function getFolloweesRepliedToThisWeekLastYear($user_id, $network) {
+        // Get dates for this week, last year
+        $datetime = new DateTime('now');
+        $day = $datetime->format('l');
+        $datetime->modify("last year");
+        $datetime->modify("last " . $day);
+        $date_low = $datetime->format('Y-m-d');
+        $datetime->modify("next " . $day);
+        $date_high = $datetime->format('Y-m-d');
+
+        $q = "SELECT DISTINCT u.* FROM #prefix#posts AS p ";
+        $q .= "INNER JOIN #prefix#users AS u ON u.user_id = p.in_reply_to_user_id AND u.network = p.network ";
+        $q .= "INNER JOIN #prefix#follows AS f ON f.user_id = p.in_reply_to_user_id AND f.network = p.network ";
+        $q .= "WHERE p.author_user_id=:user_id AND p.network=:network ";
+        $q .= "AND (p.pub_date>=:date_low AND p.pub_date<=:date_high) AND p.in_reply_to_user_id IS NOT NULL ";
+        $q .= "AND f.follower_id=:user_id ";
+        $q .= "LIMIT 12 ";
+
+        $vars = array(
+            ':user_id' => (string)$user_id,
+            ':network' => $network,
+            ':date_low' => $date_low,
+            ':date_high' => $date_high
+        );
+
+        if ($this->profiler_enabled) { Profiler::setDAOMethod(__METHOD__); }
+        $ps = $this->execute($q, $vars);
+        $all_user_rows = $this->getDataRowsAsArrays($ps);
+        $followees = array();
+        foreach ($all_user_rows as $user_row) {
+            $followee = new User($user_row);
+            $followees[] = $followee;
+        }
+
+        return $followees;
+    }
+
     public function searchFollowers(array $keywords, $network, $user_id, $page_number=1, $page_count=20) {
+        $start_on_record = ($page_number - 1) * $page_count;
         //parse advanced operators
         $name_keywords = array();
         $description_keywords = array();
@@ -576,7 +710,7 @@ class FollowMySQLDAO extends PDODAO implements FollowDAO {
                 $counter++;
             }
         }
-        $q .= "ORDER BY first_seen DESC ";
+        $q .= "ORDER BY follower_count DESC ";
         if ($page_count > 0) {
             $q .= "LIMIT :start_on_record, :limit;";
         } else {
@@ -592,5 +726,92 @@ class FollowMySQLDAO extends PDODAO implements FollowDAO {
         $ps = $this->execute($q, $vars);
 
         return $this->getDataRowsAsObjects($ps, 'User');
+    }
+
+    public function getFriendsJoinedInTimeFrame($user_id, $network, $earliest_date, $latest_date) {
+        $q  = "SELECT u.* ";
+        $q .= "FROM #prefix#users AS u ";
+        $q .= "INNER JOIN #prefix#follows f ON u.user_id = f.user_id ";
+        $q .= "WHERE f.follower_id = :user_id AND f.network=:network AND u.network=f.network AND active=1 ";
+        $q .= "AND (u.joined >= :early AND u.joined <= :late) AND u.is_protected=0 ";
+        $q .= "ORDER BY u.user_id ASC";
+        $vars = array(
+            ':user_id'=>(string)$user_id,
+            ':network'=>$network,
+            ':early'=>$earliest_date,
+            ':late'=>$latest_date
+        );
+        if ($this->profiler_enabled) { Profiler::setDAOMethod(__METHOD__); }
+        $ps = $this->execute($q, $vars);
+
+        return $this->getDataRowsAsObjects($ps, 'User');
+    }
+
+    public function getVerifiedFollowers($user_id, $network, $limit=20) {
+        $vars = array(
+            ':user_id'=>(string)$user_id,
+            ':network'=>$network,
+            ':limit'=>(int)$limit
+        );
+        $q  = "SELECT u.* FROM #prefix#users AS u ";
+        $q .= "INNER JOIN #prefix#follows AS f ON u.user_id = f.follower_id ";
+        $q .= "WHERE f.user_id = :user_id AND f.network = :network AND u.network=f.network AND active=1 ";
+        $q .= "AND u.is_verified = 1 ";
+        $q .= "ORDER BY u.follower_count DESC ";
+        $q .= "LIMIT :limit;";
+        if ($this->profiler_enabled) { Profiler::setDAOMethod(__METHOD__); }
+        $ps = $this->execute($q, $vars);
+        return $this->getDataRowsAsObjects($ps, 'User');
+    }
+
+    public function getVerifiedFollowerCount($user_id, $network) {
+        $vars = array(
+            ':user_id'=>(string)$user_id,
+            ':network'=>$network
+        );
+        $q  = "SELECT count(follower_id) as count FROM #prefix#users AS u ";
+        $q .= "INNER JOIN #prefix#follows AS f ON u.user_id = f.follower_id ";
+        $q .= "WHERE f.user_id = :user_id AND f.network = :network AND u.network=f.network AND active=1 ";
+        $q .= "AND u.is_verified = 1 ";
+        if ($this->profiler_enabled) { Profiler::setDAOMethod(__METHOD__); }
+        $ps = $this->execute($q, $vars);
+        return $this->getDataCountResult($ps);
+    }
+
+    public function getMedianFollowerCountOfFriends($user_id, $network) {
+        $total = $this->countTotalFriends($user_id, $network);
+        $number = floor($total / 2);
+        $vars = array(
+            ':user_id'=>(string)$user_id,
+            ':network'=>$network,
+        );
+        $q  = "SELECT follower_count FROM #prefix#users AS u ";
+        $q .= "INNER JOIN #prefix#follows AS f ON u.user_id = f.user_id ";
+        $q .= "WHERE f.follower_id = :user_id AND f.network = :network AND u.network=f.network AND active=1 ";
+        if ($number > 0) {
+            $q .= "LIMIT :number, 1";
+            $vars[':number'] = (int)$number;
+        } else {
+            $q .= "LIMIT 1";
+        }
+        if ($this->profiler_enabled) { Profiler::setDAOMethod(__METHOD__); }
+        $ps = $this->execute($q, $vars);
+        $result = $this->getDataRowsAsArrays($ps);
+        return $result && count($result) ? $result[0]['follower_count'] : 0;
+    }
+
+    public function getCountOfFriendsWithFewerFollowers($user_id, $network, $followers) {
+        $vars = array(
+            ':user_id'=>(string)$user_id,
+            ':network'=>$network,
+            ':followers'=>$followers
+        );
+        $q  = "SELECT count(follower_id) as count FROM #prefix#users AS u ";
+        $q .= "INNER JOIN #prefix#follows AS f ON u.user_id = f.user_id ";
+        $q .= "WHERE f.follower_id = :user_id AND f.network = :network AND u.network=f.network AND active=1 ";
+        $q .= " AND u.follower_count < :followers ";
+        if ($this->profiler_enabled) { Profiler::setDAOMethod(__METHOD__); }
+        $ps = $this->execute($q, $vars);
+        return $this->getDataCountResult($ps);
     }
 }

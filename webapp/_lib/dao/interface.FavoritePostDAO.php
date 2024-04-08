@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/model/interface.FavoritePostDAO.php
  *
- * Copyright (c) 2009-2013 Gina Trapani, Amy Unruh
+ * Copyright (c) 2009-2016 Gina Trapani, Amy Unruh
  *
  * LICENSE:
  *
@@ -24,7 +24,7 @@
  * FavoritePost Data Access Object interface
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani, Amy Unruh
+ * @copyright 2009-2016 Gina Trapani, Amy Unruh
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  * @author Amy Unruh
  *
@@ -94,6 +94,15 @@ interface FavoritePostDAO extends PostDAO {
      */
     public function getAllFavoritePostsIterator($user_id, $network, $count);
     /**
+     * Get the recently favorited posts of a user.
+     * @param int $author_user_id
+     * @param str $network
+     * @param int $count
+     * @param int $page
+     * @returns array Post objects
+     */
+    public function getRecentlyFavoritedPosts($author_user_id, $network, $count, $page=1);
+    /**
      * Get all the favorited posts of a user.
      * @param int $author_user_id
      * @param str $network
@@ -111,21 +120,58 @@ interface FavoritePostDAO extends PostDAO {
      * @return array users table array of rows who have favorited a post
      */
     public function getUsersWhoFavedPost($post_id, $network='twitter', $is_public = false);
-
     /**
      * Get the posts a user favorited a year ago today.
-     * @param $fav_of_user_id
-     * @param $network
-     * @param $from_date
-     * @return array Post objects
+     * @param str $fav_of_user_id
+     * @param str $network
+     * @param str $from_date
+     * @return arr Post objects
      */
     public function getFavoritesFromOneYearAgo($fav_of_user_id, $network, $from_date=null);
     /**
      * Get users who favorited most of an author's posts over the past specified number of days.
-     * @param $author_user_id
-     * @param $network
-     * @param $last_x_days
+     * @param str $author_user_id
+     * @param str $network
+     * @param int $last_x_days
      * @return array User objects
      */
     public function getUsersWhoFavoritedMostOfYourPosts($author_user_id, $network, $last_x_days);
+    /**
+     * Get gender of users who favorited a post.
+     * @param str $post_id
+     * @param str $network
+     * @return arr of count for male and female
+     */
+    public function getGenderOfFavoriters($post_id, $network);
+    /**
+     * Get gender of users who commented on a post.
+     * @param str $post_id
+     * @param str $network
+     * @return arr of count for male and female
+     */
+    public function getGenderOfCommenters($post_id, $network);
+    /**
+     * Get birthday of users who favorited a post.
+     * @param str $post_id
+     * @param str $network
+     * @return array with favoriter's birthdays
+     */
+    public function getBirthdayOfFavoriters($post_id, $network);
+    /**
+     * Get birthday of users who commented a post.
+     * @param str $post_id
+     * @param str $network
+     * @return array with commenter's birthdays
+     */
+    public function getBirthdayOfCommenters($post_id, $network);
+
+    /**
+     * Get a list of the user_ids of posts you favorited, and how many times, in a date range
+     * @param int $user_id The user who did the favoritng
+     * @param str $network The network
+     * @param str $from Earliest date
+     * @param str $until Latest date
+     * @return arr Array of user_id, count pairs
+     */
+    public function getCountOfFavoritedUsersInRange($user_id, $network, $from, $until);
 }

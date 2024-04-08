@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/plugins/twitter/model/class.TwitterCrawler.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -26,7 +26,7 @@
  *
  * @TODO Complete docblocks
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  */
 class TwitterCrawler {
@@ -83,9 +83,9 @@ class TwitterCrawler {
                 $this->user_dao->updateUser($this->user);
 
                 if (isset($this->user->follower_count) && $this->user->follower_count>0) {
-                    $fcount_dao = DAOFactory::getDAO('FollowerCountDAO');
-                    $fcount_dao->insert($this->user->user_id, 'twitter',
-                    $this->user->follower_count);
+                    $count_dao = DAOFactory::getDAO('CountHistoryDAO');
+                    $count_dao->insert($this->user->user_id, 'twitter',
+                    $this->user->follower_count, null, 'followers');
                 }
                 $this->logger->logUserSuccess("Successfully fetched ".$this->user->username.
                 "'s details from Twitter. Twitter's tweet count is ". number_format($this->user->post_count) .".",
@@ -161,34 +161,33 @@ class TwitterCrawler {
                 return;
             }
             $status_message = "";
-            $got_latest_page_of_tweets = false;
             $continue_fetching = true;
             $this->logger->logInfo("Twitter user post count:  " . $this->user->post_count .
             " and ThinkUp post count: "  . $this->instance->total_posts_in_system, __METHOD__.','.__LINE__);
-            while ($this->user->post_count > $this->instance->total_posts_in_system && $continue_fetching) {
-                $endpoint = $this->api->endpoints['user_timeline'];
-                $args = array();
-                $count_arg =  (isset($this->twitter_options['tweet_count_per_call']))?
-                $this->twitter_options['tweet_count_per_call']->option_value:100;
-                $args["count"] = $count_arg;
-                $args["include_rts"] = "true";
-                $args["screen_name"] = $this->user->username;
-                $last_page_of_tweets = round($this->api->archive_limit / $count_arg) + 1;
 
-                //set page and since_id params for API call
-                if ($got_latest_page_of_tweets && $this->user->post_count != $this->instance->total_posts_in_system
-                && $this->instance->total_posts_in_system < $this->api->archive_limit) {
-                    if ($this->instance->last_page_fetched_tweets < $last_page_of_tweets) {
-                        $this->instance->last_page_fetched_tweets = $this->instance->last_page_fetched_tweets + 1;
-                    } else {
-                        $continue_fetching = false;
-                        $this->instance->last_page_fetched_tweets = 0;
+            // Set up endpoint and unchanging args
+            $endpoint = $this->api->endpoints['user_timeline'];
+            $args = array();
+            $count_arg =  (isset($this->twitter_options['tweet_count_per_call']))?
+            $this->twitter_options['tweet_count_per_call']->option_value:100;
+            $args["count"] = $count_arg;
+            $args["include_rts"] = "true";
+            $args["screen_name"] = $this->user->username;
+
+            $max_id = "";
+            //have we fetching latest tweets with no max_id once?
+            $got_latest_tweets = false;
+            //are we fetching the archive using the max_id?
+            $fetching_archive = false;
+            while ($this->user->post_count > $this->instance->total_posts_in_system && $continue_fetching) {
+                if ($got_latest_tweets) {
+                    $max_id = $this->instance->last_post_id;
+                    if ($max_id !== "") {
+                        $args["max_id"] = $max_id;
+                        $fetching_archive = true;
                     }
-                    $args["page"] = $this->instance->last_page_fetched_tweets;
-                } else {
-                    if (!$got_latest_page_of_tweets && $this->instance->last_post_id > 0)
-                    $args["since_id"] = $this->instance->last_post_id;
                 }
+
                 try {
                     list($http_status, $payload) = $this->api->apiRequest($endpoint, $args);
                     if ($http_status == 200) {
@@ -197,6 +196,7 @@ class TwitterCrawler {
 
                         $post_dao = DAOFactory::getDAO('PostDAO');
                         $new_username = false;
+                        $link_dao = DAOFactory::getDAO('LinkDAO');
                         foreach ($tweets as $tweet) {
                             $tweet['network'] = 'twitter';
 
@@ -204,32 +204,82 @@ class TwitterCrawler {
                             if ( $inserted_post_key !== false) {
                                 $count = $count + 1;
                                 $this->instance->total_posts_in_system = $this->instance->total_posts_in_system + 1;
-                                //expand and insert links contained in tweet
-                                URLProcessor::processPostURLs($tweet['post_text'], $tweet['post_id'], 'twitter',
-                                $this->logger);
+                                // Expand and insert links contained in tweet
+                                $extracted_urls = Post::extractURLs($tweet['post_text']);
+                                $urls = array();
+                                // Skip over URLs where we are extracting image media
+                                foreach ($extracted_urls as $url) {
+                                    $add_url = true;
+                                    if (!empty($tweet['photos'])) {
+                                        foreach ($tweet['photos'] as $media) {
+                                            if ($media->display_url == $url || $media->url == $url) {
+                                                $add_url = false;
+                                                continue;
+                                            }
+                                        }
+                                    }
+                                    if ($add_url) {
+                                        $urls[] = $url;
+                                    }
+                                }
+                                if (count($urls)) {
+                                    URLProcessor::processPostURLs($tweet['post_text'], $tweet['post_id'], 'twitter',
+                                        $this->logger, $urls);
+                                }
+                                if (!empty($tweet['photos'])) {
+                                    foreach ($tweet['photos'] as $photo) {
+                                        $link = new Link(array(
+                                            'url' => $photo->url,
+                                            'expanded_url' => $photo->expanded_url,
+                                            'image_src' => $photo->media_url,
+                                            'post_key' => $inserted_post_key
+                                        ));
+                                        try {
+                                            $link_dao->insert($link);
+                                            $this->logger->logSuccess("Inserted $photo->url into links table",
+                                                __METHOD__.','.__LINE__);
+                                        } catch (DuplicateLinkException $e) {
+                                            $this->logger->logInfo($photo->url." already exists in links table",
+                                                __METHOD__.','.__LINE__);
+                                        } catch (DataExceedsColumnWidthException $e) {
+                                            $this->logger->logInfo($photo->url."data exceeds table column width",
+                                                __METHOD__.','.__LINE__);
+                                        }
+                                    }
+                                }
                             }
-                            if ($tweet['post_id'] > $this->instance->last_post_id)
-                            $this->instance->last_post_id = $tweet['post_id'];
+
+                            if ($this->instance->last_post_id == "" || $fetching_archive) {
+                                $this->instance->last_post_id = $tweet['post_id'];
+                            }
                         }
+                        $got_latest_tweets = true;
+
                         if (count($tweets) > 0 || $count > 0) {
                             $status_message .= ' ' . count($tweets)." tweet(s) found and $count saved";
                             $this->logger->logUserSuccess($status_message, __METHOD__.','.__LINE__);
                             $status_message = "";
+                        } else {
+                            $continue_fetching = false;
                         }
 
                         //if you've got more than the Twitter API archive limit, stop looking for more tweets
                         if ($this->instance->total_posts_in_system >= $this->api->archive_limit) {
-                            $this->instance->last_page_fetched_tweets = 1;
                             $continue_fetching = false;
                             $overage_info = "Twitter only makes ".number_format($this->api->archive_limit).
-                        " tweets available, so some of the oldest ones may be missing.";
+                            " tweets available, so some of the oldest ones may be missing.";
                         } else {
                             $overage_info = "";
                         }
                         if ($this->user->post_count == $this->instance->total_posts_in_system) {
                             $this->instance->is_archive_loaded_tweets = true;
+                            $continue_fetching = false;
                         }
-                        $got_latest_page_of_tweets = true;
+
+                        if ($max_id !== "" && $this->instance->last_post_id !== ""
+                        && $max_id == $this->instance->last_post_id) {
+                            $continue_fetching = false;
+                        }
                     } else {
                         $continue_fetching = false;
                     }
@@ -262,6 +312,7 @@ class TwitterCrawler {
     /**
      * Fetch a replied-to tweet and add it and any URLs it contains to the database.
      * @param int $tid
+     * @throws APICallLimitExceededException
      */
     private function fetchAndAddTweetRepliedTo($tid) {
         if (!isset($this->user)) {
@@ -269,31 +320,27 @@ class TwitterCrawler {
         }
         if (isset($this->user)) {
             $endpoint = $this->api->endpoints['show_tweet'];
-            try {
-                list($http_status, $payload) = $this->api->apiRequest($endpoint, array(), $tid);
-                $status_message = "";
-                if ($http_status == 200) {
-                    $tweet = $this->api->parseJSONTweet($payload);
+            list($http_status, $payload) = $this->api->apiRequest($endpoint, array(), $tid);
+            $status_message = "";
+            if ($http_status == 200) {
+                $tweet = $this->api->parseJSONTweet($payload);
 
-                    $post_dao = DAOFactory::getDAO('PostDAO');
+                $post_dao = DAOFactory::getDAO('PostDAO');
 
-                    $user_replied_to = new User($tweet, 'replies');
-                    $this->user_dao->updateUser($user_replied_to);
-                    $post_dao->addPost($tweet, $user_replied_to, $this->logger);
-                    if ($inserted_post_key !== false) {
-                        $status_message = 'Added replied to tweet ID '.$tid." to database.";
-                        URLProcessor::processPostURLs($tweet['post_text'], $tweet['post_id'], 'twitter', $this->logger);
-                    }
-                } elseif ($http_status == 404 || $http_status == 403) {
-                    $e = $this->api->parseJSONError($payload);
-                    $posterror_dao = DAOFactory::getDAO('PostErrorDAO');
-                    $posterror_dao->insertError($tid, 'twitter', $http_status, $e['error'], $this->user->user_id);
-                    $status_message = 'Error saved to tweets.';
+                $user_replied_to = new User($tweet, 'replies');
+                $this->user_dao->updateUser($user_replied_to);
+                $inserted_post_key = $post_dao->addPost($tweet, $user_replied_to, $this->logger);
+                if ($inserted_post_key !== false) {
+                    $status_message = 'Added replied to tweet ID '.$tid." to database.";
+                    URLProcessor::processPostURLs($tweet['post_text'], $tweet['post_id'], 'twitter', $this->logger);
                 }
-                $this->logger->logInfo($status_message, __METHOD__.','.__LINE__);
-            } catch (APICallLimitExceededException $e) {
-                $this->logger->logInfo($e->getMessage(), __METHOD__.','.__LINE__);
+            } elseif ($http_status == 404 || $http_status == 403) {
+                $e = $this->api->parseJSONError($payload);
+                $posterror_dao = DAOFactory::getDAO('PostErrorDAO');
+                $posterror_dao->insertError($tid, 'twitter', $http_status, $e['error'], $this->user->user_id);
+                $status_message = 'Error saved to tweets.';
             }
+            $this->logger->logInfo($status_message, __METHOD__.','.__LINE__);
         }
     }
     /**
@@ -306,18 +353,18 @@ class TwitterCrawler {
         }
         if (isset($this->user)) {
             $status_message = "";
+
+            $endpoint = $this->api->endpoints['mentions'];
+            $args = array();
+            $count_arg =  (isset($this->twitter_options['tweet_count_per_call']))?
+            $this->twitter_options['tweet_count_per_call']->option_value:100;
+            $args["count"] = $count_arg;
+
             $got_newest_mentions = false;
             $continue_fetching = true;
             while ($continue_fetching) {
-                $endpoint = $this->api->endpoints['mentions'];
-                $args = array();
-                $count_arg =  (isset($this->twitter_options['tweet_count_per_call']))?
-                $this->twitter_options['tweet_count_per_call']->option_value:100;
-                $args["count"] = $count_arg;
-
-                if ($got_newest_mentions) {
-                    $this->instance->last_page_fetched_replies++;
-                    $args['page'] = $this->instance->last_page_fetched_replies;
+                if ($got_newest_mentions && $this->instance->last_reply_id !== "") {
+                    $args['max_id'] = $this->instance->last_reply_id;
                 }
 
                 try {
@@ -328,7 +375,6 @@ class TwitterCrawler {
                         $count = 0;
                         $tweets = $this->api->parseJSONTweets($payload);
                         if (count($tweets) == 0 && $got_newest_mentions) {// you're paged back and no new tweets
-                            $this->instance->last_page_fetched_replies = 1;
                             $continue_fetching = false;
                             $this->instance->is_archive_loaded_mentions = true;
                             $status_message = 'Paged back but not finding new mentions; moving on.';
@@ -372,11 +418,15 @@ class TwitterCrawler {
                                 $mention_dao->insertMention($this->user->user_id, $this->user->username,
                                 $tweet['post_id'], $tweet['author_user_id'], 'twitter');
                             }
+
+                            if ($this->instance->last_reply_id == "" || $got_newest_mentions) {
+                                $this->instance->last_reply_id = $tweet['post_id'];
+                            }
                         }
                         if ($got_newest_mentions) {
                             if ( $count > 0) {
-                                $status_message .= count($tweets)." mentions on page ".
-                                $this->instance->last_page_fetched_replies." and $count saved";
+                                $status_message .= count($tweets)." mentions past reply ID ".
+                                $this->instance->last_reply_id." and $count saved";
                                 $this->logger->logUserSuccess($status_message, __METHOD__.','.__LINE__);
                                 $status_message = "";
                             }
@@ -398,6 +448,11 @@ class TwitterCrawler {
                             $status_message .= 'Retrieved newest mentions; Archive loaded; Stopping reply fetch.';
                             $this->logger->logInfo($status_message, __METHOD__.','.__LINE__);
                             $status_message = "";
+                        }
+
+                        if (isset($args['max_id']) && $args['max_id'] !== "" && $this->instance->last_reply_id !== ""
+                        && $args['max_id'] == $this->instance->last_reply_id) {
+                            $continue_fetching = false;
                         }
                     }
                 } catch (APICallLimitExceededException $e) {
@@ -472,14 +527,14 @@ class TwitterCrawler {
         $inserted_follow_count = 0;
 
         if ($continue_fetching) {
-            $this->logger->logUserSuccess("Starting to fetch followers. Please wait. Working...",
-            __METHOD__.','.__LINE__);
+            $this->logger->logUserSuccess("Starting to fetch followers...", __METHOD__.','.__LINE__);
         }
         $follow_dao = DAOFactory::getDAO('FollowDAO');
 
         while ( $continue_fetching) {
             $args = array();
             $endpoint = $this->api->endpoints['followers_ids'];
+            $next_cursor = $this->instance->last_follower_id_cursor;
             if (!isset($next_cursor)) {
                 $next_cursor = -1;
             }
@@ -492,35 +547,37 @@ class TwitterCrawler {
                     $continue_fetching = false;
                 } else {
                     $status_message = "Parsing JSON. ";
-                    $status_message .= "Cursor ".$next_cursor.":";
+                    $status_message .= "Cursor ".$next_cursor.": ";
                     $ids = $this->api->parseJSONIDs($payload);
                     $next_cursor = $this->api->getNextCursor();
-                    $status_message .= count($ids)." follower IDs queued to update. ";
+                    $this->instance->last_follower_id_cursor = $next_cursor;
+                    $status_message .= number_format(count($ids))." follower IDs queued to update. ";
                     $this->logger->logInfo($status_message, __METHOD__.','.__LINE__);
                     $status_message = "";
-
                     if (count($ids) == 0) {
                         $this->instance->is_archive_loaded_follows = true;
+                        $this->instance->last_follower_id_cursor = null;
                         $continue_fetching = false;
                     }
-
                     foreach ($ids as $id) {
                         // add/update follow relationship
                         if ($follow_dao->followExists($this->instance->network_user_id, $id['id'], 'twitter')) {
                             //update it
-                            if ($follow_dao->update($this->instance->network_user_id, $id['id'], 'twitter'))
-                            $updated_follow_count = $updated_follow_count + 1;
+                            if ($follow_dao->update($this->instance->network_user_id, $id['id'], 'twitter')) {
+                                $updated_follow_count = $updated_follow_count + 1;
+                            }
                         } else {
                             // insert it
-                            if ($follow_dao->insert($this->instance->network_user_id, $id['id'], 'twitter'))
-                            $inserted_follow_count = $inserted_follow_count + 1;
+                            if ($follow_dao->insert($this->instance->network_user_id, $id['id'], 'twitter')) {
+                                $inserted_follow_count = $inserted_follow_count + 1;
+                            }
                         }
                     }
                     $this->logger->logSuccess("Cursor at ".strval($next_cursor), __METHOD__.','.__LINE__);
                 }
                 if ($updated_follow_count > 0 || $inserted_follow_count > 0 ){
                     $status_message = $updated_follow_count ." follower(s) updated; ". $inserted_follow_count.
-                    " new follow(s) inserted.";
+                        " new follow(s) inserted.";
                     $this->logger->logUserSuccess($status_message, __METHOD__.','.__LINE__);
                 }
             } catch (APICallLimitExceededException $e) {
@@ -528,6 +585,13 @@ class TwitterCrawler {
                 break;
             }
         }
+    }
+    /**
+     * Clear the follower ID last cursor saved to file.
+     * @return bool
+     */
+    public function clearFollowerIDLastCursor() {
+        return unlink(FileDataManager::getDataPath('follower-id-last-cursor.txt'));
     }
     /**
      * Fetch instance user's followers: Page back only if more than 2% of follows are missing from database
@@ -580,7 +644,7 @@ class TwitterCrawler {
                         $continue_fetching = false;
                     } else {
                         $status_message = "Parsing JSON. ";
-                        $status_message .= "Cursor ".$next_cursor.":";
+                        $status_message .= "Cursor ".$next_cursor.": ";
                         $users = $this->api->parseJSONUsers($payload);
                         $next_cursor = $this->api->getNextCursor();
                         $status_message .= count($users)." followers queued to update. ";
@@ -613,20 +677,26 @@ class TwitterCrawler {
                         $this->logger->logSuccess("Cursor at ".strval($next_cursor), __METHOD__.','.__LINE__);
                     }
                     if ($updated_follow_count > 0 || $inserted_follow_count > 0 ){
-                        $status_message = $updated_follow_count ." follower(s) updated; ". $inserted_follow_count.
-                        " new follow(s) inserted.";
+                        $status_message = number_format($updated_follow_count) ." follower(s) updated; "
+                            . number_format($inserted_follow_count). " new follow(s) inserted.";
                         $this->logger->logUserSuccess($status_message, __METHOD__.','.__LINE__);
                     }
                 } catch (APICallLimitExceededException $e) {
                     $this->logger->logInfo($e->getMessage(), __METHOD__.','.__LINE__);
                     $continue_fetching = false;
+
+                    if (!$this->instance->is_archive_loaded_follows) {
+                        $this->logger->logInfo("Follower archive is STILL not loaded; begin fetching followers by IDs.",
+                            __METHOD__.','.__LINE__);
+                        $this->fetchInstanceUserFollowersByIDs();
+                    }
                     break;
                 }
             }
         }
     }
-
-    /** Find group memberships that are probably no longer active, verify, and
+    /**
+     * Find group memberships that are probably no longer active, verify, and
      * deactivate or update
      */
     public function updateStaleGroupMemberships() {
@@ -675,11 +745,11 @@ class TwitterCrawler {
                 }
             }
             if ($updated_group_member_count > 0) {
-                $group_member_count_dao = DAOFactory::getDAO('GroupMembershipCountDAO');
+                $count_history_dao = DAOFactory::getDAO('CountHistoryDAO');
                 $status_message = $updated_group_member_count ." group membership(s) updated";
                 $this->logger->logUserSuccess($status_message, __METHOD__.','.__LINE__);
                 // update current number of active list membershps
-                $group_member_count_dao->updateCount($this->instance->network_user_id, 'twitter');
+                $count_history_dao->updateGroupMembershipCount($this->instance->network_user_id, 'twitter');
             }
         }
     }
@@ -703,7 +773,7 @@ class TwitterCrawler {
             $group_dao = DAOFactory::getDAO('GroupDAO');
             $group_member_dao = DAOFactory::getDAO('GroupMemberDAO');
             // $group_owner_dao = DAOFactory::getDAO('GroupOwnerDAO');
-            $group_member_count_dao = DAOFactory::getDAO('GroupMembershipCountDAO');
+            $count_history_dao = DAOFactory::getDAO('CountHistoryDAO');
 
             while ($continue_fetching) {
 
@@ -767,12 +837,12 @@ class TwitterCrawler {
                 $this->logger->logUserSuccess($status_message, __METHOD__.','.__LINE__);
             }
             // update current number of active list membershps
-            $group_member_count_dao->updateCount($this->instance->network_user_id, 'twitter');
+            $count_history_dao->updateGroupMembershipCount($this->instance->network_user_id, 'twitter');
         }
     }
 
     /**
-     * Fetch the instance user's friends' tweets.
+     * Fetch the instance user's friends.
      */
     public function fetchInstanceUserFriends() {
         if (!isset($this->user)) {
@@ -784,11 +854,14 @@ class TwitterCrawler {
             $this->instance->total_friends_in_system = $follow_dao->countTotalFriends($this->instance->network_user_id,
             'twitter');
 
+            $this->logger->logUserInfo($this->instance->total_friends_in_system." friends in system, ".
+                $this->user->friend_count." friends according to Twitter", __METHOD__.','.__LINE__);
+
             if ($this->instance->total_friends_in_system < $this->user->friend_count) {
                 $this->instance->is_archive_loaded_friends = false;
-                $this->logger->logUserInfo($this->instance->total_friends_in_system." friends in system, ".
-                $this->user->friend_count." friends according to Twitter; Friend archive is not loaded",
-                __METHOD__.','.__LINE__);
+            } elseif ($this->instance->total_friends_in_system > $this->user->friend_count) {
+                $this->instance->is_archive_loaded_friends = true;
+                $this->cleanUpFollows($friends_only = true);
             } else {
                 $this->instance->is_archive_loaded_friends = true;
                 $this->logger->logInfo("Friend archive loaded", __METHOD__.','.__LINE__);
@@ -908,13 +981,49 @@ class TwitterCrawler {
         }
     }
     /**
-     * Fetch instance user friends by user IDs.
-     * @param int $uid
-     * @param FollowDAO $follow_dao
+     * Fetch unloaded friend details.
      */
-    private function fetchUserFriendsByIDs($uid, $follow_dao) {
-        $continue_fetching = true;
+    public function fetchUnloadedFriendDetails() {
+        if (!isset($this->user)) {
+            $this->fetchInstanceUserInfo();
+        }
+        if (isset($this->user)) {
+            $follow_dao = DAOFactory::getDAO('FollowDAO');
+            $strays = $follow_dao->getUnloadedFriendDetails($this->user->user_id, 'twitter');
+            $status_message = count($strays).' unloaded friend details to load.';
+            $this->logger->logInfo($status_message, __METHOD__.','.__LINE__);
+
+            foreach ($strays as $s) {
+                try {
+                    $this->fetchAndAddUser($s['user_id'], "Friend IDs");
+                } catch (APICallLimitExceededException $e) {
+                    $this->logger->logInfo($e->getMessage(), __METHOD__.','.__LINE__);
+                    break;
+                }
+            }
+        }
+    }
+    /**
+     * Fetch instance user friends by user IDs.
+     */
+    public function fetchUserFriendsByIDs() {
+        if (!isset($this->user)) {
+            $this->fetchInstanceUserInfo();
+        }
         $status_message = "";
+        $follow_dao = DAOFactory::getDAO('FollowDAO');
+
+        $total_friends_in_system = $follow_dao->countTotalFriends($this->instance->network_user_id, 'twitter');
+
+        if ($total_friends_in_system < $this->user->friend_count) {
+            $continue_fetching = true;
+            $this->logger->logUserInfo($total_friends_in_system." friends in system, ". $this->user->friend_count
+                ." friends according to Twitter; Friend archive is not loaded", __METHOD__.','.__LINE__);
+        } else {
+            $continue_fetching = false;
+            $this->logger->logInfo("Friend archive loaded", __METHOD__.','.__LINE__);
+        }
+
         while ($continue_fetching) {
             $args = array();
             $endpoint = $this->api->endpoints['following_ids'];
@@ -922,7 +1031,7 @@ class TwitterCrawler {
                 $next_cursor = -1;
             }
             $args['cursor'] = strval($next_cursor);
-            $args['user_id'] = strval($uid);
+            $args['user_id'] = strval($this->user->user_id);
 
             try {
                 list($http_status, $payload) = $this->api->apiRequest($endpoint, $args);
@@ -950,20 +1059,20 @@ class TwitterCrawler {
                 $inserted_follow_count = 0;
                 foreach ($ids as $id) {
                     // add/update follow relationship
-                    if ($follow_dao->followExists($id['id'], $uid, 'twitter')) {
+                    if ($follow_dao->followExists($id['id'], $this->user->user_id, 'twitter')) {
                         //update it
-                        if ($follow_dao->update($id['id'], $uid, 'twitter')) {
+                        if ($follow_dao->update($id['id'], $this->user->user_id, 'twitter')) {
                             $updated_follow_count++;
                         }
                     } else {
                         //insert it
-                        if ($follow_dao->insert($id['id'], $uid, 'twitter')) {
+                        if ($follow_dao->insert($id['id'], $this->user->user_id, 'twitter')) {
                             $inserted_follow_count++;
                         }
                     }
                 }
                 $status_message .= "$updated_follow_count existing follows updated; ".$inserted_follow_count.
-                " new follows inserted.";
+                    " new follows inserted.";
                 $this->logger->logUserInfo($status_message, __METHOD__.','.__LINE__);
             }
         }
@@ -972,78 +1081,110 @@ class TwitterCrawler {
      * Fetch user from Twitter and add to DB
      * @param int $fid
      * @param str $source Place where user was found
+     * @throws APICallLimitExceededException
      */
     private function fetchAndAddUser($fid, $source) {
         $status_message = "";
         $endpoint = $this->api->endpoints['show_user'];
-        try {
-            list($http_status, $payload) = $this->api->apiRequest($endpoint, array(), $fid);
-            if ($http_status == 200) {
-                $user_arr = $this->api->parseJSONUser($payload);
-                if (isset($user_arr[0])) {
-                    $user = new User($user_arr[0], $source);
-                    $this->user_dao->updateUser($user);
-                    $status_message = 'Added/updated user '.$user->username." in database";
-                }
-            } elseif ($http_status == 404) {
-                $e = $this->api->parseJSONError($payload);
-                $usererror_dao = DAOFactory::getDAO('UserErrorDAO');
-                $usererror_dao->insertError($fid, $http_status, $e['error'], $this->user->user_id, 'twitter');
-                $status_message = 'User error saved.';
+        list($http_status, $payload) = $this->api->apiRequest($endpoint, array(), $fid);
+        if ($http_status == 200) {
+            $user_arr = $this->api->parseJSONUser($payload);
+            if (isset($user_arr)) {
+                $user = new User($user_arr, $source);
+                $this->user_dao->updateUser($user);
+                $status_message = 'Added/updated user '.$user->username." in database";
             }
-            $this->logger->logInfo($status_message, __METHOD__.','.__LINE__);
-            $status_message = "";
-        } catch (APICallLimitExceededException $e) {
-            $this->logger->logInfo($e->getMessage(), __METHOD__.','.__LINE__);
+        } elseif ($http_status == 404) {
+            $e = $this->api->parseJSONError($payload);
+            $usererror_dao = DAOFactory::getDAO('UserErrorDAO');
+            $usererror_dao->insertError($fid, $http_status, $e['error'], $this->user->user_id, 'twitter');
+            $status_message = 'User error saved.';
         }
+        $this->logger->logInfo($status_message, __METHOD__.','.__LINE__);
+        $status_message = "";
     }
     /**
      * For each API call left, grab oldest follow relationship, check if it exists, and update table.
+     * @param bool $friends_only If true, only check for stale friends, not just follows in general
      */
-    public function cleanUpFollows() {
+    public function cleanUpFollows($friends_only = false) {
         $follow_dao = DAOFactory::getDAO('FollowDAO');
         $continue_fetching = true;
-        while ( $continue_fetching) {
-            $oldfollow = $follow_dao->getOldestFollow('twitter');
-            if ($oldfollow != null) {
+        while ($continue_fetching) {
+            if ($friends_only) {
+                $old_follow = $follow_dao->getOldestFriend($this->instance->network_user_id, 'twitter');
+                $this->logger->logInfo("Checking stale friends", __METHOD__.','.__LINE__);
+            } else {
+                $old_follow = $follow_dao->getOldestFollow('twitter');
+                $this->logger->logInfo("Checking stale followers", __METHOD__.','.__LINE__);
+            }
+            if ($old_follow != null) {
                 $endpoint = $this->api->endpoints['show_friendship'];
                 $args = array();
-                $args["source_id"] = $oldfollow["followee_id"];
-                $args["target_id"] = $oldfollow["follower_id"];
+                $args["source_id"] = $old_follow["followee_id"];
+                $args["target_id"] = $old_follow["follower_id"];
 
                 try {
-                    $this->logger->logInfo("Checking stale follow last seen ".$oldfollow["last_seen"],
-                    __METHOD__.','.__LINE__);
+                    $this->logger->logInfo("Checking stale follow last seen ".$old_follow["last_seen"],
+                        __METHOD__.','.__LINE__);
                     list($http_status, $payload) = $this->api->apiRequest($endpoint, $args);
+                    $debug_api_call = $http_status;
                     if ($http_status == 200) {
                         $friendship = $this->api->parseJSONRelationship($payload);
                         if ($friendship['source_follows_target'] == 'true') {
-                            $this->logger->logInfo("Updating follow last seen date: ".$args["source_id"]." follows ".
-                            $args["target_id"], __METHOD__.','.__LINE__);
-                            $follow_dao->update($oldfollow["followee_id"], $oldfollow["follower_id"], 'twitter');
+                            $this->logger->logInfo("Updating follow last seen date. source_follows_target is true ".
+                                $args["source_id"]." follows ". $args["target_id"].
+                                " follower_id is ".$old_follow["follower_id"]." and followee_id is ".
+                                $old_follow["followee_id"], __METHOD__.','.__LINE__);
+
+                            $follow_dao->update($args["target_id"], $args["source_id"], 'twitter', true,
+                                $debug_api_call);
                         } else {
-                            $this->logger->logInfo("Deactivating follow: ".$args["source_id"]." does not follow ".
-                            $args["target_id"], __METHOD__.','.__LINE__);
-                            $follow_dao->deactivate($oldfollow["followee_id"], $oldfollow["follower_id"], 'twitter');
+                            $this->logger->logInfo("Deactivating follow source_follows_target is false: ".
+                                $args["source_id"]." does not follow ". $args["target_id"].
+                                " follower_id is ".$old_follow["follower_id"]." and followee_id is ".
+                                $old_follow["followee_id"], __METHOD__.','.__LINE__);
+
+                            $follow_dao->deactivate($args["target_id"], $args["source_id"], 'twitter', $debug_api_call);
                         }
                         if ($friendship['target_follows_source'] == 'true') {
-                            $this->logger->logInfo("Updating follow last seen date: ".$args["target_id"]." follows ".
-                            $args["source_id"], __METHOD__.','.__LINE__);
-                            $follow_dao->update($oldfollow["follower_id"], $oldfollow["followee_id"], 'twitter');
+                            $this->logger->logInfo("Updating follow last seen date. target_follows_source is true ".
+                                $args["target_id"]." follows ". $args["source_id"].
+                                " follower_id is ".$old_follow["follower_id"]." and followee_id is ".
+                                $old_follow["followee_id"], __METHOD__.','.__LINE__);
+
+                            $follow_dao->update($args["source_id"], $args["target_id"], 'twitter', true,
+                                $debug_api_call);
                         } else {
-                            $this->logger->logInfo("Deactivating follow: ".$args["target_id"]." does not follow ".
-                            $args["source_id"], __METHOD__.','.__LINE__);
-                            $follow_dao->deactivate($oldfollow["follower_id"], $oldfollow["followee_id"], 'twitter');
+                            $this->logger->logInfo("Deactivating follow target_follows_source is false ".
+                                $args["target_id"]." does not follow ". $args["source_id"].
+                                " follower_id is ".$old_follow["follower_id"]." and followee_id is ".
+                                $old_follow["followee_id"], __METHOD__.','.__LINE__);
+
+                            $follow_dao->deactivate($args["source_id"], $args["target_id"], 'twitter',
+                                $debug_api_call);
                         }
                     } else {
                         $this->logger->logError("Got non-200 response for " .$endpoint->getShortPath(),
-                        __METHOD__.','.__LINE__);
+                            __METHOD__.','.__LINE__);
+                        $error_code = $this->api->parseJSONErrorCodeAPI($payload);
+                        if ($http_status == 403 && $error_code['error'] == 163) {
+                            $this->logger->logError("Marking follow inactive due to 403 Source User Not Found ".
+                                "error response with API 163 error", __METHOD__.','.__LINE__);
+                            // deactivate in both directions
+                            $follow_dao->deactivate($old_follow["followee_id"], $old_follow["follower_id"], 'twitter',
+                                $debug_api_call);
+                            $follow_dao->deactivate($old_follow["follower_id"], $old_follow["followee_id"], 'twitter',
+                                $debug_api_call);
+                        }
                         if ($http_status == 404) {
                             $this->logger->logError("Marking follow inactive due to 404 response",
-                            __METHOD__.','.__LINE__);
+                                __METHOD__.','.__LINE__);
                             // deactivate in both directions
-                            $follow_dao->deactivate($oldfollow["followee_id"], $oldfollow["follower_id"], 'twitter');
-                            $follow_dao->deactivate($oldfollow["follower_id"], $oldfollow["followee_id"], 'twitter');
+                            $follow_dao->deactivate($old_follow["followee_id"], $old_follow["follower_id"], 'twitter',
+                                $debug_api_call);
+                            $follow_dao->deactivate($old_follow["follower_id"], $old_follow["followee_id"], 'twitter',
+                                $debug_api_call);
                         }
                     }
                 } catch (APICallLimitExceededException $e) {
@@ -1080,21 +1221,22 @@ class TwitterCrawler {
                     $continue = false;
                 } else {
                     $post_dao = DAOFactory::getDAO('FavoritePostDAO');
+                    $fav_count = 0;
                     foreach ($tweets as $tweet) {
                         $tweet['network'] = 'twitter';
                         if ($post_dao->addFavorite($this->user->user_id, $tweet) > 0) {
                             URLProcessor::processPostURLs($tweet['post_text'], $tweet['post_id'], 'twitter',
                             $this->logger);
-                            $this->logger->logInfo("found new fav: " . $tweet['post_id'], __METHOD__.','.__LINE__);
-                            $fcount++;
-                            $this->logger->logInfo("fcount: $fcount", __METHOD__.','.__LINE__);
-                            $this->logger->logInfo("added favorite: ". $tweet['post_id'], __METHOD__.','.__LINE__);
+                            $this->logger->logInfo("Found new fav: " . $tweet['post_id'], __METHOD__.','.__LINE__);
+                            $fav_count++;
+                            $this->logger->logInfo("Fav count: $fav_count", __METHOD__.','.__LINE__);
+                            $this->logger->logInfo("Added favorite: ". $tweet['post_id'], __METHOD__.','.__LINE__);
                         } else {
                             // fav was already stored, so take no action. This could happen both because some
                             // of the favs on the given page were processed last time, or because a separate process,
                             // such as a UserStream process, is also watching for and storing favs.
-                            $status_message = "have already stored fav ". $tweet['post_id'];
-                            $this->logger->logDebug($status_message, __METHOD__.','.__LINE__);
+                            //$status_message = "Have already stored fav ". $tweet['post_id'];
+                            //$this->logger->logDebug($status_message, __METHOD__.','.__LINE__);
                         }
 
                         // keep track of the highest fav id we've encountered
@@ -1122,6 +1264,10 @@ class TwitterCrawler {
         if ($since_id != "") {
             $args["since_id"] = $since_id;
         }
+        //init vars
+        $tweets = null;
+        $http_status = null;
+        $payload = null;
         try {
             list($http_status, $payload) = $this->api->apiRequest($endpoint, $args);
             if ($http_status == 200) {
@@ -1267,6 +1413,39 @@ class TwitterCrawler {
                     $status_message = "Stop fetching tweets. cURL_status = " . $cURL_status;
                     $this->logger->logUserSuccess($status_message, __METHOD__.','.__LINE__);
                     $continue_fetching = false;
+                }
+            }
+        }
+    }
+
+    /**
+     * Update profiles of users who are friends of the instance user, and haven't been checked in 1 day.
+     * @return void
+     */
+    public function updateFriendsProfiles() {
+        if (!isset($this->user)) {
+            $this->fetchInstanceUserInfo();
+        }
+        if (isset($this->user)) {
+            //Get stalest friends
+            $follow_dao = DAOFactory::getDAO('FollowDAO');
+            $stalest_friends = $follow_dao->getStalestFriends($this->user->user_id, 'twitter', $number_days_old = 1,
+                $limit = 25);
+            $status_message = count($stalest_friends).' friends haven\'t been updated recently.';
+            $this->logger->logInfo($status_message, __METHOD__.','.__LINE__);
+
+            while (isset($stalest_friends) && count($stalest_friends) > 0) {
+                try {
+                    foreach ($stalest_friends as $user) {
+                        $this->fetchAndAddUser($user->user_id, "Friends stale update");
+                    }
+                    $stalest_friends = $follow_dao->getStalestFriends($this->user->user_id, 'twitter',
+                        $number_days_old = 1, $limit = 25);
+                    $status_message = count($stalest_friends).' friends haven\'t been updated recently.';
+                    $this->logger->logInfo($status_message, __METHOD__.','.__LINE__);
+                } catch (APICallLimitExceededException $e) {
+                    $this->logger->logInfo($e->getMessage(), __METHOD__.','.__LINE__);
+                    break;
                 }
             }
         }

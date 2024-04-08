@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/all_integration_tests.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -23,7 +23,7 @@
  *
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  */
 include 'init.tests.php';
 require_once THINKUP_WEBAPP_PATH.'_lib/extlib/simpletest/autorun.php';
@@ -37,12 +37,11 @@ $web_tests->add(new WebTestOfCaptchaImage());
 $web_tests->add(new WebTestOfChangePassword());
 $web_tests->add(new WebTestOfCrawlerRun());
 $web_tests->add(new WebTestOfCSRFToken());
-$web_tests->add(new WebTestOfDashboard());
 $web_tests->add(new WebTestOfDeleteInstance());
+$web_tests->add(new WebTestOfForgottonPassword());
 $web_tests->add(new WebTestOfLogin());
-$web_tests->add(new WebTestOfPostDetailPage());
+$web_tests->add(new WebTestOfLogout());
 $web_tests->add(new WebTestOfRegistration());
-$web_tests->add(new WebTestOfTwitterDashboard());
 
 $tr = new TextReporter();
 $start =  ((float)$usec + (float)$sec);

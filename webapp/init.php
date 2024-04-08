@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/init.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -23,20 +23,11 @@
  *
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  *
  */
-if ( version_compare(PHP_VERSION, '5.2', '<') ) {
-    exit("ERROR: ThinkUp requires PHP 5.2 or greater. The current version of PHP is ".PHP_VERSION.".");
-}
-
-//Define path globals
-if (!file_exists('README.md')) { // source repo
-    define('THINKUP_ROOT_PATH', str_replace("\\",'/', dirname(dirname(__FILE__))) .'/');
-    define('THINKUP_WEBAPP_PATH', THINKUP_ROOT_PATH . 'webapp/');
-} else { // distro package
-    define('THINKUP_ROOT_PATH', str_replace("\\",'/', dirname(__FILE__)) .'/');
-    define('THINKUP_WEBAPP_PATH', THINKUP_ROOT_PATH);
+if ( version_compare(PHP_VERSION, '5.4', '<') ) {
+    exit("ERROR: ThinkUp requires PHP 5.4 or greater. The current version of PHP is ".PHP_VERSION.".");
 }
 
 //Register our lazy class loader

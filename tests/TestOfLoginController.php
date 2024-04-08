@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/TestOfLoginController.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -23,7 +23,7 @@
  * Test of LoginController
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  */
 
@@ -109,7 +109,7 @@ class TestOfLoginController extends ThinkUpUnitTestCase {
 
         $v_mgr = $controller->getViewManager();
         $this->assertEqual($v_mgr->getTemplateDataItem('controller_title'), 'Log in');
-        $this->assertEqual($v_mgr->getTemplateDataItem('error_msg'), 'Incorrect email');
+        $this->assertEqual($v_mgr->getTemplateDataItem('error_msg'), 'Hmm, that email seems wrong.');
         $this->assertPattern("/Log In/", $results);
     }
 
@@ -122,7 +122,7 @@ class TestOfLoginController extends ThinkUpUnitTestCase {
 
         $v_mgr = $controller->getViewManager();
         $this->assertEqual($v_mgr->getTemplateDataItem('controller_title'), 'Log in');
-        $this->assertEqual($v_mgr->getTemplateDataItem('error_msg'), 'Incorrect password');
+        $this->assertEqual($v_mgr->getTemplateDataItem('error_msg'), 'Hmm, that password seems wrong.');
         $this->assertPattern("/Log In/", $results);
     }
 
@@ -150,7 +150,7 @@ class TestOfLoginController extends ThinkUpUnitTestCase {
         $v_mgr = $controller->getViewManager();
         $this->assertEqual($v_mgr->getTemplateDataItem('controller_title'), 'Log in');
         $error_msg = 'Inactive account. ';
-        $error_msg .= '<a href="http://thinkup.com/docs/install/install.html#activate-your-account">';
+        $error_msg .= '<a href=\"http://thinkup.com/docs/install/install.html#activate-your-account\">';
         $error_msg .= 'You must activate your account.</a>';
         $this->assertEqual($error_msg, $v_mgr->getTemplateDataItem('error_msg'));
     }
@@ -205,7 +205,7 @@ class TestOfLoginController extends ThinkUpUnitTestCase {
 
             $v_mgr = $controller->getViewManager();
             $this->assertEqual($v_mgr->getTemplateDataItem('controller_title'), 'Log in');
-            $this->assertPattern("/Incorrect password/", $v_mgr->getTemplateDataItem('error_msg'));
+            $this->assertPattern("/Hmm, that password seems wrong./", $v_mgr->getTemplateDataItem('error_msg'));
             $owner = $this->DAO->getByEmail('me2@example.com');
             $this->assertEqual($owner->failed_logins, $i);
             $i = $i + 1;
@@ -245,11 +245,11 @@ class TestOfLoginController extends ThinkUpUnitTestCase {
             $owner = $this->DAO->getByEmail('me2@example.com');
 
             if ($i < 10) {
-                $this->assertPattern("/Incorrect password/", $v_mgr->getTemplateDataItem('error_msg'));
+                $this->assertPattern("/Hmm, that password seems wrong./", $v_mgr->getTemplateDataItem('error_msg'));
                 $this->assertEqual($owner->failed_logins, $i);
             } else {
                 $this->assertEqual("Inactive account. Account deactivated due to too many failed logins. ".
-                '<a href="forgot.php">Reset your password.</a>', $v_mgr->getTemplateDataItem('error_msg'));
+                '<a href=\"forgot.php\">Reset your password.</a>', $v_mgr->getTemplateDataItem('error_msg'));
                 $this->assertEqual($owner->account_status, "Account deactivated due to too many failed logins");
             }
             $i = $i + 1;
@@ -282,5 +282,53 @@ class TestOfLoginController extends ThinkUpUnitTestCase {
         $v_mgr = $controller->getViewManager();
         $this->assertEqual($v_mgr->getTemplateDataItem('is_registration_open'), false);
         $this->assertNoPattern('/Register/', $result);
+    }
+
+    public function testOfThinkUpLLCRedirect() {
+        $config = Config::getInstance();
+        $config->setValue('thinkupllc_endpoint', 'http://example.com/user/');
+
+        $controller = new LoginController(true);
+        $result = $controller->go();
+
+        $this->assertEqual($controller->redirect_destination, 'http://example.com/user/');
+    }
+
+    public function testLoginFormWithOutRedirect() {
+        $_GET['redirect'] = 'http://example.com/redirect/';
+        $controller = new LoginController(true);
+        $results = $controller->go();
+        $this->debug($results);
+        $this->assertPattern( '/http\:\/\/example.com\/redirect/', $results);
+    }
+
+    public function testLoginFormWithRedirect() {
+        $_GET['redirect'] = 'http://example.com/redirect/';
+        $controller = new LoginController(true);
+        $results = $controller->go();
+        $this->debug($results);
+        $this->assertPattern( '/http\:\/\/example.com\/redirect/', $results);
+    }
+
+    public function testInvalidLoginWithCustomRedirect() {
+        $_POST['Submit'] = 'Log In';
+        $_POST['email'] = 'dontexist@example.com';
+        $_POST['pwd'] = 'secretpassword';
+        $_POST['redirect'] = 'http://example.com/redirect/';
+        $controller = new LoginController(true);
+        $results = $controller->go();
+        $this->debug($results);
+        $this->assertPattern( '/http\:\/\/example.com\/redirect/', $results);
+    }
+
+    public function testValidLoginWithCustomRedirect() {
+        $_POST['Submit'] = 'Log In';
+        $_POST['email'] = 'me@example.com';
+        $_POST['pwd'] = 'secretpassword';
+        $_POST['redirect'] = 'http://example.com/redirect/';
+        $controller = new LoginController(true);
+        $results = $controller->go();
+        $this->debug($controller->redirect_destination);
+        $this->assertPattern( '/example\.com\/redirect/', $controller->redirect_destination);
     }
 }

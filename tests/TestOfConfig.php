@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/TestOfConfig.php
  *
- * Copyright (c) 2009-2013 Gina Trapani, Mark Wilkie
+ * Copyright (c) 2009-2016 Gina Trapani, Mark Wilkie
  *
  * LICENSE:
  *
@@ -22,7 +22,7 @@
  *
  * Test of Config object
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani, Mark Wilkie
+ * @copyright 2009-2016 Gina Trapani, Mark Wilkie
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  *
  */
@@ -65,6 +65,11 @@ class TestOfConfig extends ThinkUpUnitTestCase {
         $THINKUP_CFG['THINKUP_VERSION_REQUIRED'] =
         array('php' => $THINKUP_VERSION_REQUIRED['php'], 'mysql' => $THINKUP_VERSION_REQUIRED['mysql']);
         $THINKUP_CFG['enable_profiler']=false;
+        //tests assume Mandrill is not enabled
+        $THINKUP_CFG['mandrill_api_key']='';
+        //tests assume ThinkUp LLC redirects are not enabled
+        $config->setValue('thinkupllc_endpoint', null);
+        $THINKUP_CFG['thinkupllc_endpoint'] = null;
         $values_array = $config->getValuesArray();
         $this->assertIdentical($THINKUP_CFG, $values_array);
     }

@@ -2,8 +2,8 @@
 
     <span class="pull-right">{insert name="help_link" id='insightsgenerator'}</span>
     <h1>
-        <img src="{$site_root_path}plugins/insightsgenerator/assets/img/plugin_icon.png" class="plugin-image">
-        Insights Generator Plugin
+        <i class="fa fa-list text-muted"></i>
+        Insights Generator
     </h1>
 
     <p>{$message}</p>
@@ -20,7 +20,7 @@
     {foreach from=$installed_plugins key=pid item=plugin name=foo}
         <tr>
             <td><b>{$plugin.name}</b></td>
-            <td>{$plugin.description}</td>
+            <td>{$plugin.description} {if $plugin.when}<span class="label label-default">{$plugin.when}</span>{/if}</td>
         </tr>
     {/foreach}
     </table>
@@ -29,11 +29,9 @@
 <div class="append_20">
 
 {if $options_markup}
-    {if $user_is_admin}
-        {include file="_plugin.showhider.tpl"}
-        {include file="_usermessage.tpl" field="setup"}
-        {$options_markup}
-    {/if}
+    <p>
+    {$options_markup}
+    </p>
 {/if}
 </div>
 

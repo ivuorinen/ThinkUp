@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/model/interface.ExportDAO.php
  *
- * Copyright (c) 2011-2013 Gina Trapani
+ * Copyright (c) 2011-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -24,7 +24,7 @@
  * Export Data Access Object interface
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2011-2013 Gina Trapani
+ * @copyright 2011-2016 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  *
  */
@@ -115,7 +115,7 @@ interface ExportDAO {
      * @param $network
      * @param $file
      */
-    public function exportFollowerCountToFile($user_id, $network, $file);
+    public function exportCountHistoryToFile($user_id, $network, $file);
     /**
      * Export followers, followees, and user data to file.
      * @param $user_id

@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/model/interface.OwnerInstanceDAO.php
  *
- * Copyright (c) 2009-2013 Gina Trapani, Mark Wilkie
+ * Copyright (c) 2009-2016 Gina Trapani, Mark Wilkie
  *
  * LICENSE:
  *
@@ -24,7 +24,7 @@
  * OwnerInstance Data Access Object interface
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani, Mark Wilkie
+ * @copyright 2009-2016 Gina Trapani, Mark Wilkie
  * @author Mark Wilkie <mwilkie[at]gmail[dot]com>
  *
  */
@@ -53,11 +53,17 @@ interface OwnerInstanceDAO {
      */
     public function get($owner_id, $instance_id);
     /**
-     * Get owner instances by an instance id
+     * Get owner instances by an instance ID
      * @param int instance_id
      * @return array OwnerInstance objects
      */
     public function getByInstance($instance_id);
+    /**
+     * Get owner instances by an owner ID
+     * @param int owner_id
+     * @return array OwnerInstance objects
+     */
+    public function getByOwner($owner_id);
     /**
      * Inserts an owner instance record
      * @param int owner_id
@@ -90,17 +96,27 @@ interface OwnerInstanceDAO {
      */
     public function updateTokens($owner_id, $instance_id, $oauth_token, $oauth_token_secret);
     /**
-     * Updates auth error for owner/instance, return true|false for update status
-     * @param int owner_id
-     * @param int instance_id
+     * Updates auth error for instance/auth tokens, return true|false for update status.
+     * @param int $instance_id
+     * @param str $oauth_access_token
+     * @param str $oauth_access_token_secret
      * @param str auth_error Optional, leave blank or null when there's no error during successful auth
      * @return bool
      */
-    public function setAuthError($owner_id, $instance_id, $auth_error='');
+    public function setAuthErrorByTokens($instance_id, $oauth_access_token, $oauth_access_token_secret,
+    $auth_error="");
     /**
      * Gets auth tokens by instance_id
      * @param int instance_id
      * @return array $token_assoc_array
      */
     public function getOAuthTokens($id);
+    /**
+     * Get owner email address by tokens
+     * @param str $instance_id
+     * @param str $access_token
+     * @param str $oauth_access_token_secret Defaults to empty string
+     * @return str Email address of the owner associated with auth tokens
+     */
+    public function getOwnerEmailByInstanceTokens($instance_id, $access_token, $oauth_access_token_secret='');
 }

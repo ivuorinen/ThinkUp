@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/classes/class.TestMySQLDAO.php
  *
- * Copyright (c) 2009-2013 Christoffer Viken, Gina Trapani, Mark Wilkie
+ * Copyright (c) 2009-2016 Christoffer Viken, Gina Trapani, Mark Wilkie
  *
  * LICENSE:
  *
@@ -24,7 +24,7 @@
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  * @author Mark Wilkie <mark[at]bitterpill[dot]org>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Christoffer Viken, Gina Trapani, Mark Wilkie
+ * @copyright 2009-2016 Christoffer Viken, Gina Trapani, Mark Wilkie
  *
  * MySQL TestDAO implementation class for TestOfPDODAO and TestOfDAOFactory
  */
@@ -75,6 +75,12 @@ class TestMySQLDAO extends PDODAO implements TestDAO {
     // test bad sql
     public function badSql() {
         $sql = "select na form mooo";
+        $stmt = $this->execute($sql);
+    }
+
+    // test too-lengthy data
+    public function insertTooLongContent() {
+        $sql = "insert into #prefix#test_table (test_name) values ('123456789012345678901234567890')";
         $stmt = $this->execute($sql);
     }
 

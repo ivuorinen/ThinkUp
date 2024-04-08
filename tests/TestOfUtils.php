@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/TestOfUtils.php
  *
- * Copyright (c) 2009-2013 Gina Trapani, Guillaume Boudreau
+ * Copyright (c) 2009-2016 Gina Trapani, Guillaume Boudreau
  *
  * LICENSE:
  *
@@ -24,7 +24,7 @@
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  * @author Guillaume Boudreau <gboudreau[at]pommepause[dot]com>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani, Guillaume Boudreau
+ * @copyright 2009-2016 Gina Trapani, Guillaume Boudreau
  */
 require_once dirname(__FILE__).'/init.tests.php';
 require_once THINKUP_WEBAPP_PATH.'_lib/extlib/simpletest/autorun.php';
@@ -54,9 +54,9 @@ class TestOfUtils extends ThinkUpUnitTestCase {
         $this->assertTrue(Utils::validateEmail('h@bit.ly'));
         $this->assertTrue(Utils::validateEmail('you@example.com'));
         $this->assertTrue(Utils::validateEmail('youfirstname.yourlastname@example.co.uk'));
-        //do validate local addresses
-        $this->assertTrue(Utils::validateEmail('yaya@yaya'));
-        $this->assertTrue(Utils::validateEmail('me@localhost'));
+        //don't validate local addresses
+        $this->assertFalse(Utils::validateEmail('yaya@yaya'));
+        $this->assertFalse(Utils::validateEmail('me@localhost'));
         //don't validate addresses with invalid chars
         $this->assertFalse(Utils::validateEmail('yaya'));
         $this->assertFalse(Utils::validateEmail('me@localhost@notavalidaddress'));
@@ -212,10 +212,57 @@ class TestOfUtils extends ThinkUpUnitTestCase {
     public function testGetSiteRootPathFromFileSystem() {
         // function assumes $_SERVER['PHP_SELF'] is set
         // it only is in the web server context so we set it here to test
-        $_SERVER['PHP_SELF'] = Config::getInstance()->getValue('site_root_path');
+        $_SERVER['PHP_SELF'] = Config::getInstance()->getValue('site_root_path').'index.php';
         $filesystem_site_root_path = Utils::getSiteRootPathFromFileSystem();
         $cfg_site_root_path = Config::getInstance()->getValue('site_root_path');
         $this->assertEqual($filesystem_site_root_path, $cfg_site_root_path);
+
+        //API calls
+        $_SERVER['PHP_SELF'] = Config::getInstance()->getValue('site_root_path').'api/v1/session/login.php';
+        $filesystem_site_root_path = Utils::getSiteRootPathFromFileSystem();
+        $cfg_site_root_path = Config::getInstance()->getValue('site_root_path');
+        $this->assertEqual($filesystem_site_root_path, $cfg_site_root_path);
+    }
+
+    public function testGetApplicationRequestURI() {
+        // function assumes $_SERVER['REQUEST_URI'] is set
+        // it only is in the web server context so we set it here to test
+        $_SERVER['REQUEST_URI'] = Config::getInstance()->getValue('site_root_path').'index.php';
+        $this->debug($_SERVER['REQUEST_URI']);
+        $request_uri = Utils::getApplicationRequestURI();
+        $this->assertEqual($request_uri, 'index.php');
+
+        $_SERVER['REQUEST_URI'] = Config::getInstance()->getValue('site_root_path').'account/?p=facebook';
+        $request_uri = Utils::getApplicationRequestURI();
+        $this->assertEqual($request_uri, 'account/?p=facebook');
+
+        //API calls
+        $_SERVER['REQUEST_URI'] = Config::getInstance()->getValue('site_root_path').'api/v1/session/login.php';
+        $request_uri = Utils::getApplicationRequestURI();
+        $this->assertEqual($request_uri, 'api/v1/session/login.php');
+    }
+
+    public function testGetApplicationHostName() {
+        //no $_SERVER vars set, but with application setting set
+        $builder = FixtureBuilder::build('options', array('namespace'=>'application_options',
+        'option_name'=>'server_name', 'option_value'=>'testservername') );
+        $host_name = Utils::getApplicationHostName();
+        $expected_host_name = 'testservername';
+        $this->assertEqual($host_name, $expected_host_name);
+
+        //SERVER_NAME, not HTTP_HOST
+        $_SERVER['HTTP_HOST'] = null;
+        $_SERVER['SERVER_NAME'] = 'mytestservername';
+        $host_name = Utils::getApplicationHostName();
+        $expected_host_name = 'mytestservername';
+        $this->assertEqual($host_name, $expected_host_name);
+
+        //HTTP_HOST, not SERVER_NAME
+        $_SERVER['HTTP_HOST'] = 'myothertestservername';
+        $_SERVER['SERVER_NAME'] = null;
+        $host_name = Utils::getApplicationHostName();
+        $expected_host_name = 'myothertestservername';
+        $this->assertEqual($host_name, $expected_host_name);
     }
 
     public function testGetApplicationURL() {
@@ -324,5 +371,83 @@ class TestOfUtils extends ThinkUpUnitTestCase {
         $utils_url = Utils::getApplicationURL(false);
         $expected_url = 'http://localhost/Think+Up/';
         $this->assertEqual($utils_url, $expected_url);
+    }
+
+    public function testOfIsThinkUpLLC() {
+        $cfg = Config::getInstance();
+        $cfg->setValue('thinkupllc_endpoint', null);
+        $this->assertFalse(Utils::isThinkUpLLC());
+
+        $cfg->setValue('thinkupllc_endpoint', 'http://example.com/thinkup/');
+        $this->assertTrue(Utils::isThinkUpLLC());
+    }
+
+    public function testOfStripURLsOutOfText() {
+        $text = "Entrepreneur, Investor, Adventurer - CEO - http://t.co/Nf6FJgO2qd - CEO - http://t.co/GlUI1VRYNj ".
+            "@webairhosting @webairinc @domainpals";
+        $stripped_text = Utils::stripURLsOutOfText($text);
+        $this->debug($stripped_text);
+        $this->assertEqual($stripped_text, "Entrepreneur, Investor, Adventurer - CEO -  - CEO -  ".
+            "@webairhosting @webairinc @domainpals");
+
+        $text = "Startup founder & CEO of https://t.co/JDtjH7GTad We help people find better job opportunities.";
+        $stripped_text = Utils::stripURLsOutOfText($text);
+        $this->debug($stripped_text);
+        $this->assertEqual($stripped_text, "Startup founder & CEO of  We help people find better job opportunities.");
+
+        $text = "Designer at @8x8 | Previously Owned Design Informer (Acquired by @smashingmag) | ".
+            "Co-Founder of @Famous_Outfits - http://t.co/0BHBzdBOjW";
+        $stripped_text = Utils::stripURLsOutOfText($text);
+        $this->debug($stripped_text);
+        $this->assertEqual($stripped_text, "Designer at @8x8 | Previously Owned Design Informer ".
+            "(Acquired by @smashingmag) | Co-Founder of @Famous_Outfits - ");
+
+        $text = "I work at company (http://company.com/)";
+        $stripped_text = Utils::stripURLsOutOfText($text);
+        $this->debug($stripped_text);
+        $this->assertEqual($stripped_text, "I work at company ()");
+
+        $text = "My site is http://company.com, and it is great";
+        $stripped_text = Utils::stripURLsOutOfText($text);
+        $this->debug($stripped_text);
+        $this->assertEqual($stripped_text, "My site is , and it is great");
+    }
+
+    public function testOfStemWord() {
+        $tests = array(
+            'root' => 'root',
+            'rooted' => 'root',
+            'rooting' => 'root',
+            'roots' => 'root',
+            'Roots' => 'Root',
+            'Root' => 'Root',
+            'pasted' => 'past', // Yes, stems are weird... because English.
+            'paste' => 'past',
+            'tweets' => 'tweet',
+            'tweeting' => 'tweet',
+        );
+        foreach ($tests as $word => $stem) {
+            $test_stem = Utils::stemWord($word);
+            $this->assertEqual($stem, $test_stem, "Stem of $word should be $stem, was $test_stem");
+        }
+    }
+
+    public function testOfGetPopularityIndex() {
+        // posts of varying degrees of popularity
+        $posts = array();
+        Mock::generate('Post');
+        for ($i=0; $i<5; $i++) {
+            $post = new MockPost();
+            $post->retweet_count_cache = 100+$i;
+            $post->favlike_count_cache = 100+$i;
+            $post->reply_count_cache = 100+$i;
+            $posts[] = $post;
+        }
+
+        $i = 0;
+        foreach($posts as $post) {
+            $this->assertEqual(Utils::getPopularityIndex($post), 1000+$i*10);
+            $i++;
+        }
     }
 }

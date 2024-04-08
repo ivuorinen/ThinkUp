@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/plugins/expandurls/model/class.ExpandURLsPlugin.php
  *
- * Copyright (c) 2009-2013 Gina Trapani, Christoffer Viken, Guillaume Boudreau, Mark Wilkie
+ * Copyright (c) 2009-2016 Gina Trapani, Christoffer Viken, Guillaume Boudreau, Mark Wilkie
  *
  * LICENSE:
  *
@@ -24,7 +24,7 @@
  * ExpandURLs Crawler Plugin
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani, Christoffer Viken, Guillaume Boudreau, Mark Wilkie
+ * @copyright 2009-2016 Gina Trapani, Christoffer Viken, Guillaume Boudreau, Mark Wilkie
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  *
  */
@@ -89,7 +89,7 @@ class ExpandURLsPlugin extends Plugin implements CrawlerPlugin {
 
         //Limit the number of links expanded each crawl
         $this->link_limit = isset($options['links_to_expand']->option_value) ?
-        (int)$options['links_to_expand']->option_value : 1500;
+        (int)$options['links_to_expand']->option_value : 500;
 
         if ($this->link_limit != 0) {
             //set Flickr API key
@@ -120,7 +120,10 @@ class ExpandURLsPlugin extends Plugin implements CrawlerPlugin {
      * Save expanded version of all unexpanded URLs to data store, as well as intermediary short links.
      */
     public function expandOriginalURLs($flickr_api_key=null) {
-        $links_to_expand = $this->link_dao->getLinksToExpand($this->link_limit);
+        $links_to_expand = $this->link_dao->getLinksToExpandForInstances($this->link_limit);
+        if (count($links_to_expand) < 1) {
+            $links_to_expand = $this->link_dao->getLinksToExpand($this->link_limit);
+        }
 
         $this->logger->logUserInfo(count($links_to_expand)." links to expand. Please wait. Working...",
         __METHOD__.','.__LINE__);
@@ -146,22 +149,45 @@ class ExpandURLsPlugin extends Plugin implements CrawlerPlugin {
                         $fully_expanded = true;
                     }
                     //end Flickr thumbnail processing
-                    $expanded_url = URLExpander::expandURL($short_link,$link->url, $index, count($links_to_expand),
+                    $expanded_url = URLExpander::expandURL($short_link, $link->url, $index, count($links_to_expand),
                     $this->link_dao, $this->logger);
                     if ($expanded_url == $short_link || $expanded_url == ''
                     || $endless_loop_prevention_counter > self::EXPANSION_CAP) {
                         $fully_expanded = true;
                     } else {
-                        $this->short_link_dao->insert($link->id, $short_link);
+                        try {
+                            $this->short_link_dao->insert($link->id, $short_link);
+                        } catch (DataExceedsColumnWidthException $e) {
+                            $this->logger->logError($short_link." short link record exceeds column width, cannot save",
+                            __METHOD__.','.__LINE__);
+                            $fully_expanded = true;
+                        }
                     }
-                    $short_link = $expanded_url;
+                    if (strlen($expanded_url) < 256) {
+                        $short_link = $expanded_url;
+                    } else {
+                        $fully_expanded = true;
+                    }
                     $endless_loop_prevention_counter++;
                 }
                 if (!$has_expanded_flickr_link) {
                     if ($expanded_url != '' ) {
-                        $image_src = URLProcessor::getImageSource($expanded_url);
-                        $this->link_dao->saveExpandedUrl($link->url, $expanded_url, '', $image_src);
-                        $total_expanded = $total_expanded + 1;
+                        if (!isset($link->image_src) || $link->image_src == '') {
+                            $image_src = URLProcessor::getImageSource($expanded_url);
+                        } else {
+                            $image_src = $link->image_src;
+                        }
+                        $url_details = URLExpander::getWebPageDetails($expanded_url);
+                        try {
+                            $this->link_dao->saveExpandedUrl($link->url, $expanded_url, $url_details['title'],
+                            $image_src, $url_details['description']);
+                            $total_expanded = $total_expanded + 1;
+                        } catch (DataExceedsColumnWidthException $e) {
+                            $this->logger->logError($link->url." record exceeds column width, cannot save",
+                            __METHOD__.','.__LINE__);
+                            $this->link_dao->saveExpansionError($link->url, "URL exceeds column width");
+                            $total_errors = $total_errors + 1;
+                        }
                     } else {
                         $this->logger->logError($link->url." not a valid URL - relocates to nowhere",
                         __METHOD__.','.__LINE__);
@@ -170,9 +196,9 @@ class ExpandURLsPlugin extends Plugin implements CrawlerPlugin {
                     }
                 }
             } else {
-                $total_errors = $total_errors + 1;
                 $this->logger->logError($link->url." not a valid URL", __METHOD__.','.__LINE__);
                 $this->link_dao->saveExpansionError($link->url, "Invalid URL");
+                $total_errors = $total_errors + 1;
             }
             $has_expanded_flickr_link = false;
         }
@@ -209,7 +235,8 @@ class ExpandURLsPlugin extends Plugin implements CrawlerPlugin {
                 $total_updated = 0;
                 foreach ($bitly_links_to_update as $link) {
                     $this->logger->logInfo("Getting bit.ly click stats for ". ($total_updated+1). " of ".
-                    count($bitly_links_to_update)." ".$bitly_url." links (".$link->short_url.")", __METHOD__.','.__LINE__);
+                    count($bitly_links_to_update)." ".$bitly_url." links (".$link->short_url.")",
+                    __METHOD__.','.__LINE__);
                     $link_data = $api_accessor->getBitlyLinkData($link->short_url);
                     if ($link_data["clicks"] != '') {
                         //save click total here

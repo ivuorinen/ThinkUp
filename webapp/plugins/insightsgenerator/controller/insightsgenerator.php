@@ -1,10 +1,10 @@
 <?php
 /*
  Plugin Name: Insights Generator
- Plugin URI: http://github.com/ginatrapani/thinkup/tree/master/webapp/plugins/insightsgenerator/
+ Plugin URI: https://github.com/ThinkUpLLC/ThinkUp/tree/master/webapp/plugins/insightsgenerator/
  Description: Pluggable plugin populates the insights stream.
  Class: InsightsGeneratorPlugin
- Icon: assets/img/plugin_icon.png
+ Icon: list
  Version: 0.01
  Author:
  */
@@ -13,7 +13,7 @@
  *
  * ThinkUp/webapp/plugins/InsightsGenerator/controller/InsightsGenerator.php
  *
- * Copyright (c) 2012-2013 Gina Trapani
+ * Copyright (c) 2012-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -31,7 +31,7 @@
  * <http://www.gnu.org/licenses/>.
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2012-2013 Gina Trapani
+ * @copyright 2012-2016 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  */
 

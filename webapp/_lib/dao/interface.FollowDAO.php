@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/model/interface.FollowDAO.php
  *
- * Copyright (c) 2009-2013 Gina Trapani, Christoffer Viken
+ * Copyright (c) 2009-2016 Gina Trapani, Christoffer Viken
  *
  * LICENSE:
  *
@@ -24,7 +24,7 @@
  * Follow Data Access Object Interface
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani, Christoffer Viken
+ * @copyright 2009-2016 Gina Trapani, Christoffer Viken
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  * @author Christoffer Viken <christoffer[at]viken[dot]me>
  */
@@ -104,7 +104,15 @@ interface FollowDAO {
      */
     public function countTotalFriends($user_id, $network);
     /**
-     * Gets the number of friends that is protected.
+     * Gets the number of friends of a user that joined the network after the specified date
+     * @param int $user_id
+     * @param str $network
+     * @param str $date Fetch friends joined after this date
+     * @return int Number of friends that joined after date
+     */
+    public function countTotalFriendsJoinedAfterDate($user_id, $network, $date);
+    /**
+     * Gets the number of friends that are protected.
      * Includes inactive friendships in count.
      * @param int $user_id
      * @param str $network
@@ -112,25 +120,41 @@ interface FollowDAO {
      */
     public function countTotalFriendsProtected($user_id, $network);
     /**
-     * Get a list of, friends without details in storage.
+     * Get a list of followers without details in storage.
      * @param int $user_id
      * @param str $network
      * @return array Numbered keys, with arrays - named keys
      */
     public function getUnloadedFollowerDetails($user_id, $network);
     /**
-     * Get the friend updated the longest time ago, if age is more than 1 day.
+     * Get a list of friends without details in storage.
      * @param int $user_id
      * @param str $network
-     * @return User object
+     * @return array Numbered keys, with arrays - named keys
      */
-    public function getStalestFriend($user_id, $network);
+    public function getUnloadedFriendDetails($user_id, $network);
+    /**
+     * Get the friends updated the longest time ago, if age is more than a given number of days ago.
+     * @param int $user_id
+     * @param str $network
+     * @param int $number_days_old Default 2
+     * @param int $limit Number to return, default 10
+     * @return arr User objects
+     */
+    public function getStalestFriends($user_id, $network, $number_days_old=2, $limit=10);
     /**
      * Gets the person in storage seen the longest time ago.
      * @param str $network
      * @return array Named keys
      */
     public function getOldestFollow($network);
+    /**
+     * Gets the person in storage the user follows, where the follow was seen the longest time ago.
+     * @param str $user_id
+     * @param str $network
+     * @return array Named keys
+     */
+    public function getOldestFriend($user_id, $network);
     /**
      * Gets the followers with most followers.
      * @param int $user_id
@@ -157,6 +181,24 @@ interface FollowDAO {
      * @return array - numbered keys, with arrays - named keys
      */
     public function getLeastLikelyFollowersThisWeek($user_id, $network, $count = 20, $page = 1);
+    /**
+     * Gets the followers who are verified by the network first seen by ThinkUp a specified number of days ago.
+     * @param str $user_id
+     * @param str $network
+     * @param int $days_ago
+     * @param int $limit
+     * @return array - numbered keys, with arrays - named keys
+     */
+    public function getVerifiedFollowersByDay($user_id, $network, $days_ago=0, $limit=10);
+    /**
+     * Gets the followers from a location by the network first seen by ThinkUp a specified number of days ago.
+     * @param str $user_id
+     * @param str $network
+     * @param str $location
+     * @param int $days_ago
+     * @param int $limit
+     **/
+    public function getFollowersFromLocationByDay($user_id, $network, $location, $days_ago=0, $limit=10);
     /**
      * Gets the followers with the earliest join date.
      * @param int $user_id
@@ -228,6 +270,13 @@ interface FollowDAO {
      */
     public function getFriendsNotFollowingBack($uid, $network);
     /**
+     * Gets the people you follow and replied to on this week, a year ago.
+     * @param int $user_id
+     * @param str $network
+     * @return array - numbered keys, with arrays - named keys
+     */
+    public function getFolloweesRepliedToThisWeekLastYear($user_id, $network);
+    /**
      * Search a user's followers names and bio. (Use name:term to search only name field.)
      * @param arr $keywords
      * @param str $network
@@ -236,4 +285,42 @@ interface FollowDAO {
      * @param int $page_count
      */
     public function searchFollowers(array $keywords, $network, $user_id, $page_number=1, $page_count=20);
+    /**
+     * Gets the followers that joined just before user
+     * @param str $user_id
+     * @param str $network
+     * @param str $earliest_date Earliest date a friend should have joined to be returned
+     * @param str $latest_date Latest date a friend should have joined to be returned
+     * @return array Array of User objects
+     **/
+    public function getFriendsJoinedInTimeFrame($user_id, $network, $earliest_date, $latest_date);
+    /**
+     * Gets the followers who are verified by the network, order by follower count descending
+     * @param str $user_id
+     * @param str $network
+     * @param int $limit
+     * @return array - numbered keys, with arrays - named keys
+     */
+    public function getVerifiedFollowers($user_id, $network, $limit=20);
+    /**
+     * Gets the count of followers who are verified by the network
+     * @param str $user_id
+     * @param str $network
+     * @return int number of verified followers
+     */
+    public function getVerifiedFollowerCount($user_id, $network);
+    /**
+     * Find the median follower count of people a user follows
+     * @param str $user_id
+     * @param str $network
+     * @return float average follower count
+     */
+    public function getMedianFollowerCountOfFriends($user_id, $network);
+    /**
+     * Find out how many people a user follows have fewer followers
+     * @param str $user_id
+     * @param str $network
+     * @return float average follower count
+     */
+    public function getCountOfFriendsWithFewerFollowers($user_id, $network, $followers);
 }

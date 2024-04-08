@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/model/interface.UserDAO.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -24,7 +24,7 @@
  * User Data Access Object interface
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  *
  */
@@ -59,6 +59,13 @@ interface UserDAO {
      * @return User User
      */
     public function getDetails($user_id, $network);
+
+    /**
+     * Get user given a user key (id from the tu_users table)
+     * @param int $user_key
+     * @return User User
+     */
+    public function getDetailsByUserKey($user_key);
 
     /**
      * Update an array of users

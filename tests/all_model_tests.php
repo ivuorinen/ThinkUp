@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/all_model_tests.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -23,7 +23,7 @@
  *
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  */
 include dirname(__FILE__) . '/init.tests.php';
 require_once THINKUP_WEBAPP_PATH.'_lib/extlib/simpletest/autorun.php';
@@ -39,15 +39,15 @@ $model_tests->add(new TestOfConfig());
 $model_tests->add(new TestOfFileDataManager());
 $model_tests->add(new TestOfCrawler());
 $model_tests->add(new TestOfFollowMySQLDAO());
-$model_tests->add(new TestOfFollowerCountMySQLDAO());
+$model_tests->add(new TestOfCountHistoryMySQLDAO());
 $model_tests->add(new TestOfGroupMySQLDAO());
 $model_tests->add(new TestOfGroupMemberMySQLDAO());
-$model_tests->add(new TestOfGroupMembershipCountMySQLDAO());
 $model_tests->add(new TestOfInsightBaselineMySQLDAO());
 $model_tests->add(new TestOfInsightMySQLDAO());
+$model_tests->add(new TestOfInsightTerms());
 $model_tests->add(new TestOfInstanceMySQLDAO());
-$model_tests->add(new TestOfInsightMySQLDAO());
 $model_tests->add(new TestOfDashboardModuleCacher());
+$model_tests->add(new TestOfInsight());
 $model_tests->add(new TestOfInstaller());
 $model_tests->add(new TestOfInstallerMySQLDAO());
 $model_tests->add(new TestOfInviteMySQLDAO());
@@ -71,13 +71,14 @@ $model_tests->add(new TestOfExportMySQLDAO());
 $model_tests->add(new TestOfPostErrorMySQLDAO());
 $model_tests->add(new TestOfProfiler());
 $model_tests->add(new TestOfSession());
+$model_tests->add(new TestOfSessionMySQLDAO());
 $model_tests->add(new TestOfSessionCache());
+$model_tests->add(new TestOfTimeHelper());
 $model_tests->add(new TestOfViewManager());
 $model_tests->add(new TestOfUserMySQLDAO());
 $model_tests->add(new TestOfUserErrorMySQLDAO());
 $model_tests->add(new TestOfUtils());
 $model_tests->add(new TestOfWebapp());
-$model_tests->add(new TestOfMenuItem());
 $model_tests->add(new TestOfDataset());
 $model_tests->add(new TestOfPostIterator());
 $model_tests->add(new TestOfMutexMySQLDAO());
@@ -94,6 +95,12 @@ $model_tests->add(new TestOfTableStatsMySQLDAO());
 $model_tests->add(new TestOfShortLinkMySQLDAO());
 $model_tests->add(new TestOfHashtagPostMySQLDAO());
 $model_tests->add(new TestOfInstanceHashtagMySQLDAO());
+$model_tests->add(new TestOfVideoMySQLDAO());
+$model_tests->add(new TestOfPhotoMySQLDAO());
+$model_tests->add(new TestOfCookieMySQLDAO());
+$model_tests->add(new TestOfUserVersionsMySQLDAO());
+$model_tests->add(new TestOfSerializer());
+$model_tests->add(new TestOfChartHelper());
 
 $tr = new TextReporter();
 list($usec, $sec) = explode(" ", microtime());

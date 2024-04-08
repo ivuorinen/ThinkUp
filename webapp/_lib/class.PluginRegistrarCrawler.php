@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/class.PluginRegistrarCrawler.php
  *
- * Copyright (c) 2009-2013 Gina Trapani, Guillaume Boudreau
+ * Copyright (c) 2009-2016 Gina Trapani, Guillaume Boudreau
  *
  * LICENSE:
  *
@@ -26,7 +26,7 @@
  * Singleton provides hooks for crawler plugins.
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani, Guillaume Boudreau
+ * @copyright 2009-2016 Gina Trapani, Guillaume Boudreau
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  *
  */
@@ -90,7 +90,7 @@ class PluginRegistrarCrawler extends PluginRegistrar {
         $global_mutex_name = self::GLOBAL_MUTEX;
 
         // Everyone needs to check the global mutex
-        $lock_successful = $mutex_dao->getMutex($global_mutex_name);
+        $lock_successful = 1; $mutex_dao->getMutex($global_mutex_name); // 1
 
         if ($lock_successful) {
             // Global mutex was free, which means no admin crawls are under way
@@ -119,8 +119,17 @@ class PluginRegistrarCrawler extends PluginRegistrar {
      * Register crawler plugin.
      * @param str $object_name Name of Crawler plugin object which instantiates the Crawler interface, like
      * "TwitterPlugin"
+     * @param boolean $run_before_insight_generator true if this plugin should run before the insight generator plugin
      */
-    public function registerCrawlerPlugin($object_name) {
-        $this->registerObjectFunction('crawl', $object_name, 'crawl');
+    public function registerCrawlerPlugin($object_name, $run_before_insight_generator=true) {
+        $this->registerObjectFunction('crawl', $object_name, 'crawl', $run_before_insight_generator);
+    }
+
+    /**
+     * FOR TESTING PURPOSES ONLY
+     * @returns array of function callbacks
+     */
+    public function getObjectFunctionCallbacks() {
+        return $this->object_function_callbacks;
     }
 }

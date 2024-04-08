@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/TestOfInstallerController.php
  *
- * Copyright (c) 2009-2013 Dwi Widiastuti, Gina Trapani
+ * Copyright (c) 2009-2016 Dwi Widiastuti, Gina Trapani
  *
  * LICENSE:
  *
@@ -24,7 +24,7 @@
  * @author Dwi Widiastuti <admin[at]diazuwi[dot]web[dot]id>
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani, Guillaume Boudreau
+ * @copyright 2009-2016 Gina Trapani, Guillaume Boudreau
  */
 require_once dirname(__FILE__).'/init.tests.php';
 require_once THINKUP_WEBAPP_PATH.'_lib/extlib/simpletest/autorun.php';
@@ -179,7 +179,7 @@ class TestOfInstallerController extends ThinkUpUnitTestCase {
         $this->debug($result);
         $this->assertPattern('/Your system has everything it needs to run ThinkUp./', $result);
         //make sure we've auto-progressed to step 2 b/c all requirements have been met
-        $this->assertPattern('/Create your ThinkUp account/', $result);
+        $this->assertPattern('/Create your ThinkUp/', $result);
         $this->restoreConfigFile();
         //reset back to what it was
         ini_set('session.save_path', $session_save_path);
@@ -198,7 +198,7 @@ class TestOfInstallerController extends ThinkUpUnitTestCase {
         $controller = new InstallerController(true);
         $this->assertTrue(isset($controller));
         $result = $controller->go();
-        $this->assertPattern('/Configure ThinkUp/', $result);
+        $this->assertPattern('/Create your ThinkUp account/', $result);
         $this->restoreConfigFile();
     }
 
@@ -606,7 +606,7 @@ class TestOfInstallerController extends ThinkUpUnitTestCase {
         $this->assertTrue(isset($controller));
         $result = $controller->go();
         $this->debug($result);
-        $this->assertPattern('/ThinkUp has been installed successfully./', $result);
+        $this->assertPattern('/ThinkUp has been successfully installed./', $result);
 
         $option_dao = DAOFactory::getDAO('OptionDAO');
         $current_stored_server_name = $option_dao->getOptionByName(OptionDAO::APP_OPTIONS, 'server_name');

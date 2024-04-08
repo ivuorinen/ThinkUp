@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/class.Loader.php
  *
- * Copyright (c) 2009-2013 Dwi Widiastuti, Gina Trapani
+ * Copyright (c) 2009-2016 Dwi Widiastuti, Gina Trapani
  *
  * LICENSE:
  *
@@ -26,7 +26,7 @@
  * Implements lazy loading of ThinkUp classes by registering _autoload method in this class.
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Dwi Widiastuti, Gina Trapani
+ * @copyright 2009-2016 Dwi Widiastuti, Gina Trapani
  * @author Dwi Widiastuti <admin[at]diazuwi[dot]web[dot]id>
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  *
@@ -91,7 +91,7 @@ class Loader {
         );
 
         // set default lookup path for special classes
-        self::$special_classes ["Smarty"] = THINKUP_WEBAPP_PATH . "_lib/extlib/Smarty-2.6.26/libs/Smarty.class.php";
+        self::$special_classes ["Smarty"] = THINKUP_WEBAPP_PATH . "_lib/extlib/Smarty-2.6.28/libs/Smarty.class.php";
 
         if (isset($paths)) {
             foreach($paths as $path) {
@@ -106,13 +106,17 @@ class Loader {
      */
     public static function definePathConstants() {
         if ( !defined('THINKUP_ROOT_PATH') ) {
-            define('THINKUP_ROOT_PATH', str_replace("\\",'/', dirname(dirname(__FILE__))) .'/');
+            if (strpos(__FILE__, 'webapp/_lib' ) !== false) { // root is up 3 directories
+                define('THINKUP_ROOT_PATH', str_replace("\\",'/', dirname(dirname(dirname(__FILE__)))) .'/');
+            } else { // root is up 2 directories
+                define('THINKUP_ROOT_PATH', str_replace("\\",'/', dirname(dirname(__FILE__))) .'/');
+            }
         }
         if (!defined('THINKUP_WEBAPP_PATH') ) {
             if (file_exists(THINKUP_ROOT_PATH . 'webapp')) {
                 define('THINKUP_WEBAPP_PATH', THINKUP_ROOT_PATH . 'webapp/');
             } else {
-                define('THINKUP_WEBAPP_PATH', THINKUP_ROOT_PATH . 'thinkup/');
+                define('THINKUP_WEBAPP_PATH', THINKUP_ROOT_PATH);
             }
         }
     }

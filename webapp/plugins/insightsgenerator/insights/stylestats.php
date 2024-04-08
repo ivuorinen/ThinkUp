@@ -1,13 +1,14 @@
 <?php
 /*
  Plugin Name: Style Stats
- Description: Stats on different types of posts in the past week. (Saturdays)
+ Description: Stats on different types of posts in the past week.
+ When: Saturdays for Twitter, Tuesdays otherwise
  */
 /**
  *
  * ThinkUp/webapp/plugins/insightsgenerator/insights/StyleStat.php
  *
- * Copyright (c) 2012-2013 Gina Trapani
+ * Copyright (c) 2012-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -25,24 +26,33 @@
  * <http://www.gnu.org/licenses/>.
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2012-2013 Gina Trapani
+ * @copyright 2012-2016 Gina Trapani
  * @author Gina Trapani <ginatrapani [at] gmail [dot] com>
  */
 
 class StyleStatsInsight extends InsightPluginParent implements InsightPlugin {
 
-    public function generateInsight(Instance $instance, $last_week_of_posts, $number_days) {
-        parent::generateInsight($instance, $last_week_of_posts, $number_days);
+    public function generateInsight(Instance $instance, User $user, $last_week_of_posts, $number_days) {
+        parent::generateInsight($instance, $user, $last_week_of_posts, $number_days);
+        $this->logger->logInfo("Begin generating insight", __METHOD__.','.__LINE__);
 
-        $in_test_mode =  ((isset($_SESSION["MODE"]) && $_SESSION["MODE"] == "TESTS") || getenv("MODE")=="TESTS");
-        //Only insert this insight if it's Saturday or if we're testing
-        if (date('w') == 6 || $in_test_mode ) {
+        if ($instance->network == 'twitter') {
+            $day_of_week = 6;
+        } else {
+            $day_of_week = 2;
+        }
+
+        $should_generate_insight = self::shouldGenerateWeeklyInsight('style_stats', $instance, $insight_date='today',
+            $regenerate_existing_insight=false, $day_of_week=$day_of_week, count($last_week_of_posts),
+            $excluded_networks=array('foursquare', 'instagram'));
+
+        if ($should_generate_insight) {
             $total_posts = array("questions" => 0, "quotations" => 0, "links" => 0, "photos" => 0);
             $total_replies = array("all" => 0, "questions" => 0, "quotations" => 0, "links" => 0, "photos" => 0);
             $average_replies = array("all" => 0, "questions" => 0, "quotations" => 0, "links" => 0, "photos" => 0);
             $total_reshares = array("all" => 0, "questions" => 0, "quotations" => 0, "links" => 0, "photos" => 0);
             $average_reshares = array("all" => 0, "questions" => 0, "quotations" => 0, "links" => 0, "photos" => 0);
-            if ( sizeof( $last_week_of_posts) > 5  && $instance->network != 'foursquare') {
+            if (sizeof( $last_week_of_posts) > 5) {
                 $this->logger->logSuccess("Calculating style stats ", __METHOD__.','.__LINE__);
                 foreach ($last_week_of_posts as $post) {
                     $total_replies["all"] += $post->reply_count_cache;
@@ -114,23 +124,57 @@ class StyleStatsInsight extends InsightPluginParent implements InsightPlugin {
 
                 $insight_text = '';
                 arsort($total_posts);
-                $keys = array_keys($total_posts);
-                $last_type = end($keys);
+                $posts_positive = array();
+                $posts_zero = array();
                 foreach ($total_posts as $type => $total) {
-                    if ($type == $last_type) { //last item in list
-                        $insight_text .= "and ";
-                    }
-                    if ($insight_text == '') { //first item
-                        $insight_text .= (($total == 0)?"None":$total)." of $this->username's posts this week ".
-                        (($total == 1)?"was a":"were")." ".(($total == 1)?substr($type, 0, -1):$type);
+                    if ($total == 0) {
+                        $posts_zero[$type] = $total;
                     } else {
-                        $insight_text .= (($total == 0)?"none":$total)." ".(($total == 1)?"was a":"were")." ".
+                        $posts_positive[$type] = $total;
+                    }
+                }
+                $keys_pos = array_keys($posts_positive);
+                $last_type_pos = end($keys_pos);
+
+                foreach ($posts_positive as $type => $total) {
+                    if ($type == $last_type_pos && count($posts_positive) >= 2) { //last item in list
+                        $style_analysis .= "and ";
+                    }
+                    if ($style_analysis == '') { //first item
+                        $style_analysis .= (($total == 0)?"None":$total)." of $this->username's posts this week ".
+                        (($total == 1)?"was a":"were")." ".(($total == 1)?substr($type, 0, -1):$type);
+                    } elseif ($total == 0) {
+
+                    } else {
+                        $style_analysis .= (($total == 0)?"none":$total)." ".(($total == 1)?"was a":"were")." ".
                         (($total == 1)?substr($type, 0, -1):$type);
                     }
-                    if ($type == $last_type) {  //last item in list
-                        $insight_text .= ".";
+                    if ($type == $last_type_pos) {  //last item in list
+                        $style_analysis .= ".";
+                    } else if (count($posts_positive) > 2) {
+                        $style_analysis .= ", ";
                     } else {
-                        $insight_text .= ", ";
+                        $style_analysis .= " ";
+                    }
+                }
+
+                $keys_zero = array_keys($posts_zero);
+                $last_type_zero = end($keys_zero);
+                foreach ($posts_zero as $type => $total) {
+                    if ($type == $last_type_zero && count($posts_zero) >= 2) { //last item in list
+                        $style_analysis_neg .= "or ";
+                    }
+                    if ($style_analysis_neg == '') { //first item
+                        $style_analysis_neg .= "$this->username didn't post any $type";
+                    } else {
+                        $style_analysis_neg .= "$type";
+                    }
+                    if ($type == $last_type_zero) {  //last item in list
+                        $style_analysis_neg .= ".";
+                    } else if (count($posts_zero) > 2) {
+                        $style_analysis_neg .= ", ";
+                    } else {
+                        $style_analysis_neg .= " ";
                     }
                 }
 
@@ -170,22 +214,67 @@ class StyleStatsInsight extends InsightPluginParent implements InsightPlugin {
                             }
                         }
                     }
-                    $insight_text .= $sentence;
                 }
-                //TODO: Stop using the cached dashboard data and generate fresh here
-                $hot_posts_data = $this->insight_dao->getPreCachedInsightData('PostMySQLDAO::getHotPosts',
-                $instance->id, date('Y-m-d'));
 
-                if (isset($hot_posts_data)) {
-                    $this->insight_dao->insertInsight('style_stats', $instance->id, date('Y-m-d'),
-                    "Post style:", $insight_text, basename(__FILE__, ".php"), Insight::EMPHASIS_LOW,
-                    serialize($hot_posts_data));
+                if ($sentence) {
+                    //Remove period at the end of the headline
+                    $headline = substr($sentence, 0, (strlen($sentence) - 1));
+                    $insight_text = $style_analysis;
+                } elseif ($style_analysis_neg) {
+                    //Remove period at the end of the headline
+                    $headline = substr($style_analysis, 0, (strlen($style_analysis) - 1));
+                    $insight_text = $style_analysis_neg;
+                } else {
+                    $headline = '';
+                    $insight_text = '';
+                }
+
+                // $insight_text .= '</p><p class="style-stats-icon-graphs">';
+                // if ($total_posts["questions"] > 0 ) {
+                //         for ($icon_count = 1; $icon_count <= $total_posts["questions"]; $icon_count++) {
+                //             $insight_text .= '<i class="fa fa-question fa-fw"></i>';
+                //         }
+                // }
+                // if ($total_posts["quotations"] > 0 ) {
+                //         for ($icon_count = 1; $icon_count <= $total_posts["quotations"]; $icon_count++) {
+                //             $insight_text .= '<i class="fa fa-quote-left fa-fw"></i><i class="fa fa-quote-right fa-fw"></i>';
+                //         }
+                // }
+                // if ($total_posts["links"] > 0 ) {
+                //         for ($icon_count = 1; $icon_count <= $total_posts["links"]; $icon_count++) {
+                //             $insight_text .= '<i class="fa fa-link fa-fw"></i>';
+                //         }
+                // }
+                // if ($total_posts["photos"] > 0 ) {
+                //         for ($icon_count = 1; $icon_count <= $total_posts["photos"]; $icon_count++) {
+                //             $insight_text .= '<i class="fa fa-camera fa-fw"></i>';
+                //         }
+                // }
+
+                if ($insight_text != '' && $headline != '') {
+                    $my_insight = new Insight();
+
+                    //REQUIRED: Set the insight's required attributes
+                    $my_insight->slug = 'style_stats'; //slug to label this insight's content
+                    $my_insight->instance_id = $instance->id;
+                    $my_insight->date = date('Y-m-d'); //date is often this or $simplified_post_date
+                    $my_insight->headline = $headline;
+                    $my_insight->text = $insight_text;
+                    $my_insight->header_image = '';
+                    $my_insight->filename = basename(__FILE__, ".php");
+                    $my_insight->emphasis = Insight::EMPHASIS_LOW;
+
+                    $this->insight_dao->insertInsight($my_insight);
+                } else {
+                    $this->logger->logSuccess("No headline or body for style stats ", __METHOD__.','.__LINE__);
                 }
             } else {
                 $this->logger->logSuccess("Only ".sizeof( $last_week_of_posts).
                 " posts last week, not enough to calculate style stats ", __METHOD__.','.__LINE__);
             }
         }
+
+        $this->logger->logInfo("Done generating insight", __METHOD__.','.__LINE__);
     }
 
     private function endsWith($str, $end_str) {

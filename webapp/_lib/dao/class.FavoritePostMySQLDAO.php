@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/model/class.FavoritePostMySQLDAO.php
  *
- * Copyright (c) 2009-2013 Amy Unruh, Gina Trapani
+ * Copyright (c) 2009-2016 Amy Unruh, Gina Trapani
  *
  * LICENSE:
  *
@@ -28,7 +28,7 @@
  * about favorited posts.  The favorites table stores post id, user (author) id, favoriter id, and network.
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani, Amy Unruh
+ * @copyright 2009-2016 Gina Trapani, Amy Unruh
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  * @author Amy Unruh
  *
@@ -74,6 +74,10 @@ class FavoritePostMySQLDAO extends PostMySQLDAO implements FavoritePostDAO  {
         $res = $this->execute($q, $vars);
         return $this->getUpdateCount($res);
     }
+    public function getRecentlyFavoritedPosts($owner_id, $network, $count, $page=1, $is_public = false) {
+        return $this->getAllFavoritePostsByUserID($owner_id, $network, $count, "fav_timestamp", "DESC", null,
+        $page, false, $is_public);
+    }
     public function getAllFavoritePosts($owner_id, $network, $count, $page=1, $is_public = false) {
         return $this->getAllFavoritePostsByUserID($owner_id, $network, $count, "pub_date", "DESC", null,
         $page, false, $is_public);
@@ -102,7 +106,8 @@ class FavoritePostMySQLDAO extends PostMySQLDAO implements FavoritePostDAO  {
     $ubound = null, $page=1, $iterator = false, $is_public = false) {
         $direction = $direction=="DESC" ? "DESC": "ASC";
         $start_on_record = ($page - 1) * $count;
-        if ( !in_array($order_by, $this->REQUIRED_FIELDS) && !in_array($order_by, $this->OPTIONAL_FIELDS  )) {
+        if (!in_array($order_by, $this->REQUIRED_FIELDS) && !in_array($order_by, $this->OPTIONAL_FIELDS)
+            && $order_by != 'fav_timestamp') { // This is added in the query as meta-data, so allowed
             $order_by="pub_date";
         }
         if ($is_public) {
@@ -110,10 +115,11 @@ class FavoritePostMySQLDAO extends PostMySQLDAO implements FavoritePostDAO  {
         } else {
             $protected = '';
         }
-        $q = "SELECT p.*, pub_date - interval #gmt_offset# hour AS adj_pub_date
-        FROM (#prefix#posts p
-        INNER JOIN #prefix#favorites f on f.post_id = p.post_id)
-        WHERE f.fav_of_user_id = :owner_id AND p.network=:network ";
+        $q = "SELECT p.*, f.fav_timestamp AS favorited_timestamp,
+                     pub_date - interval #gmt_offset# hour AS adj_pub_date
+              FROM (#prefix#posts p
+                    INNER JOIN #prefix#favorites f on f.post_id = p.post_id)
+             WHERE f.fav_of_user_id = :owner_id AND p.network=:network ";
         $q .= $protected;
         if ($order_by == 'reply_count_cache') {
             $q .= "AND reply_count_cache > 0 ";
@@ -379,6 +385,7 @@ class FavoritePostMySQLDAO extends PostMySQLDAO implements FavoritePostDAO  {
         $q .= "INNER JOIN #prefix#users u ON u.user_id = f.fav_of_user_id ";
         $q .= "INNER JOIN #prefix#posts p ON f.post_id = p.post_id ";
         $q .= "WHERE f.author_user_id = :author_user_id and f.network=:network ";
+        $q .= "AND f.author_user_id != f.fav_of_user_id ";
         $q .= "AND p.pub_date >= date_sub(current_date, INTERVAL :last_x_days day) ";
         $q .= "GROUP BY f.fav_of_user_id ORDER BY total_likes DESC";
         $q .= ") favs WHERE favs.total_likes > 1 LIMIT 3";
@@ -401,5 +408,119 @@ class FavoritePostMySQLDAO extends PostMySQLDAO implements FavoritePostDAO  {
             $users[] = $user;
         }
         return $users;
+    }
+
+    public function getGenderOfFavoriters($post_id, $network) {
+        $q = "SELECT u.gender, COUNT(*) as count_gender FROM #prefix#users u ";
+        $q .= "INNER JOIN #prefix#favorites f ON f.fav_of_user_id = u.user_id ";
+        $q .= "WHERE f.post_id = :post_id AND f.network = :network ";
+        $q .= "GROUP BY gender";
+
+        $vars = array (
+            ':post_id' => $post_id,
+            ':network' => $network
+        );
+        if ($this->profiler_enabled) { Profiler::setDAOMethod ( __METHOD__ ); }
+
+        $ps = $this->execute ( $q, $vars );
+        $rows = $this->getDataRowsAsArrays ( $ps );
+        $gender = array ();
+        foreach ( $rows as $row ) {
+            if ($row ['gender'] == "female") {
+                $gender ['female_likes_count'] = $row ['count_gender'];
+            }
+            if ($row ['gender'] == "male") {
+                $gender ['male_likes_count'] = $row ['count_gender'];
+            }
+        }
+        return $gender;
+    }
+
+    public function getGenderOfCommenters($post_id, $network) {
+        //Only count distinct commentors, don't count a commentor twice if she's commented twice
+        $q = "SELECT u.gender, COUNT(DISTINCT u.id) as count_gender FROM #prefix#users u ";
+        $q .= "INNER JOIN #prefix#posts p ON p.author_user_id = u.user_id AND p.network = u.network ";
+        $q .= "WHERE p.in_reply_to_post_id = :post_id AND p.network = :network AND u.user_id != p.in_reply_to_user_id ";
+        $q .= "GROUP BY gender";
+
+        $vars = array (
+            ':post_id' => $post_id,
+            ':network'=>$network
+        );
+        if ($this->profiler_enabled) { Profiler::setDAOMethod ( __METHOD__ ); }
+
+        $ps = $this->execute ( $q, $vars );
+        $rows = $this->getDataRowsAsArrays ( $ps );
+        $gender = array ();
+        foreach ( $rows as $row ) {
+            if ($row ['gender'] == "female") {
+                $gender ['female_comment_count'] = $row ['count_gender'];
+            }
+            if ($row ['gender'] == "male") {
+                $gender ['male_comment_count'] = $row ['count_gender'];
+            }
+        }
+        return $gender;
+    }
+
+	public function getBirthdayOfFavoriters($post_id, $network) {
+		$q = "SELECT u.birthday FROM #prefix#favorites f, #prefix#users u ";
+		$q .= "WHERE f.post_id = :post_id AND f.network = :network ";
+		$q .= "AND f.fav_of_user_id = u.user_id ";
+
+		$vars = array (
+			':post_id' => $post_id,
+            ':network' => $network
+		);
+		if ($this->profiler_enabled) {
+			Profiler::setDAOMethod ( __METHOD__ );
+		}
+
+		$ps = $this->execute ( $q, $vars );
+		$rows = $this->getDataRowsAsArrays ( $ps );
+		$age = array ();
+		foreach ( $rows as $row ) {
+			$age[] = $row ['birthday'];
+		}
+		return $age;
+	}
+
+	public function getBirthdayOfCommenters($post_id, $network) {
+		$q = "SELECT u.birthday FROM #prefix#posts p, #prefix#users u ";
+		$q .= "WHERE p.in_reply_to_post_id = :post_id AND p.network = :network ";
+		$q .= "AND p.author_user_id = u.user_id";
+
+		$vars = array (
+			':post_id' => $post_id,
+            ':network' => $network
+		);
+		if ($this->profiler_enabled) {
+			Profiler::setDAOMethod ( __METHOD__ );
+		}
+
+		$ps = $this->execute ( $q, $vars );
+		$rows = $this->getDataRowsAsArrays ( $ps );
+		$age = array ();
+		foreach ( $rows as $row ) {
+			$age[] = $row ['birthday'];
+		}
+		return $age;
+	}
+
+    public function getCountOfFavoritedUsersInRange($user_id, $network, $from, $until) {
+        $q = "SELECT count(*) as count, author_user_id as user_id FROM #prefix#favorites f ";
+        $q .= "WHERE f.fav_of_user_id=:user_id AND f.network=:network AND f.fav_timestamp BETWEEN  :from AND :until ";
+        $q .= "GROUP BY f.author_user_id ";
+
+        $vars = array (
+            ':user_id' => $user_id,
+            ':network' => $network,
+            ':from' => $from,
+            ':until' => $until,
+        );
+        if ($this->profiler_enabled) { Profiler::setDAOMethod (__METHOD__); }
+        $ps = $this->execute($q, $vars);
+        $rows = $this->getDataRowsAsArrays($ps);
+        return $rows;
     }
 }

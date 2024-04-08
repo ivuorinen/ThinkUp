@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/TestOfPluginRegistrar.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -22,7 +22,7 @@
  *
  * Test of PluginRegistrar class
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  */
 require_once dirname(__FILE__).'/init.tests.php';
@@ -68,5 +68,44 @@ class TestOfPluginRegistrar extends ThinkUpBasicUnitTestCase {
         $this->expectException(new
         Exception("The TestFauxPluginOne object does not have a performAppFunction function."));
         $test_ph->performAppFunction();
+    }
+
+    public function testOrderOfPlugins() {
+        $plugin_registrar = new PluginRegistrarCrawler();
+        // Register some plugins that should run before the insight generator
+        $plugin_registrar->registerCrawlerPlugin('TwitterPlugin', true);
+        $plugin_registrar->registerCrawlerPlugin('FacebookPlugin', true);
+        // Register the insight generator
+        $plugin_registrar->registerCrawlerPlugin('InsightsGeneratorPlugin', true);
+        // Register some that should run after the insight generator
+        $plugin_registrar->registerCrawlerPlugin('FoursquarePlugin', false);
+        $plugin_registrar->registerCrawlerPlugin('YouTubePlugin', false);
+        // Order the plugins and check they're in the right order
+        $plugin_registrar->orderPlugins('crawl');
+        $plugins = $plugin_registrar->getObjectFunctionCallbacks();
+        $this->assertNotNull($plugins);
+        $crawl_plugins = $plugins['crawl'];
+        $this->assertEqual($crawl_plugins[0][0], 'TwitterPlugin');
+        $this->assertEqual($crawl_plugins[1][0], 'FacebookPlugin');
+        $this->assertEqual($crawl_plugins[2][0], 'InsightsGeneratorPlugin');
+        $this->assertEqual($crawl_plugins[3][0], 'FoursquarePlugin');
+        $this->assertEqual($crawl_plugins[4][0], 'YouTubePlugin');
+    }
+
+    public function testOrderOfPluginsWithoutInsightGenerator() {
+        $plugin_registrar = new PluginRegistrarCrawler();
+        $plugin_registrar->registerCrawlerPlugin('TwitterPlugin', true);
+        $plugin_registrar->registerCrawlerPlugin('FacebookPlugin', true);
+        $plugin_registrar->registerCrawlerPlugin('FoursquarePlugin', false);
+        $plugin_registrar->registerCrawlerPlugin('YouTubePlugin', false);
+        // Order the plugins and check they're in the right order
+        $plugin_registrar->orderPlugins('crawl');
+        $plugins = $plugin_registrar->getObjectFunctionCallbacks();
+        $this->assertNotNull($plugins);
+        $crawl_plugins = $plugins['crawl'];
+        $this->assertEqual($crawl_plugins[0][0], 'TwitterPlugin');
+        $this->assertEqual($crawl_plugins[1][0], 'FacebookPlugin');
+        $this->assertEqual($crawl_plugins[2][0], 'FoursquarePlugin');
+        $this->assertEqual($crawl_plugins[3][0], 'YouTubePlugin');
     }
 }

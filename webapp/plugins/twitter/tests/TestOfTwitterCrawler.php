@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/plugins/twitter/tests/TestOfTwitterCrawler.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -25,7 +25,7 @@
  * @TODO Test the rest of the TwitterCrawler methods
  * @TODO Add testFetchTweetsWithLinks, assert Links and images get inserted
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  *
  */
@@ -89,18 +89,20 @@ class TestOfTwitterCrawler extends ThinkUpUnitTestCase {
 
         // insert instances_hashtags
         $this->builders[] = FixtureBuilder::build('instances_hashtags', array('id' => 1, 'instance_id' => 1,
-        'hashtag_id' => 1, 'last_post_id' => '0', 'earliest_post_id' => '0', 'last_page_fetched_tweets' => 1));
+        'hashtag_id' => 1, 'last_post_id' => '0', 'earliest_post_id' => '0'));
     }
 
     public function tearDown() {
         $this->builders = null;
         $this->logger->close();
+        $this->instance = null;
+        $this->api = null;
         parent::tearDown();
     }
 
     private function setUpInstanceUserAnilDash() {
         $r = array('id'=>1, 'network_username'=>'anildash', 'network_user_id'=>'36823', 'network_viewer_id'=>'36823',
-        'last_post_id'=>'0', 'last_page_fetched_replies'=>0, 'last_page_fetched_tweets'=>'17',
+        'last_post_id'=>'0', 'last_reply_id'=>'1001',
         'total_posts_in_system'=>'0', 'total_replies_in_system'=>'0', 'total_follows_in_system'=>'0',
         'is_archive_loaded_replies'=>'0', 'is_archive_loaded_follows'=>'0', 'total_posts_by_owner'=>1,
         'crawler_last_run'=>'', 'earliest_reply_in_system'=>'',  'avg_replies_per_day'=>'2', 'is_public'=>'0',
@@ -119,7 +121,7 @@ class TestOfTwitterCrawler extends ThinkUpUnitTestCase {
 
     private function setUpInstanceUserAnilDashDelete() {
         $r = array('id'=>1, 'network_username'=>'anildash', 'network_user_id'=>'36825', 'network_viewer_id'=>'36823',
-        'last_post_id'=>'0', 'last_page_fetched_replies'=>0, 'last_page_fetched_tweets'=>'17',
+        'last_post_id'=>'0', 'last_reply_id'=>'10001',
         'total_posts_in_system'=>'21', 'total_replies_in_system'=>'0', 'total_follows_in_system'=>'0',
         'is_archive_loaded_replies'=>'0', 'is_archive_loaded_follows'=>'0', 'total_posts_by_owner'=>1,
         'crawler_last_run'=>'', 'earliest_reply_in_system'=>'',  'avg_replies_per_day'=>'2', 'is_public'=>'0',
@@ -138,7 +140,7 @@ class TestOfTwitterCrawler extends ThinkUpUnitTestCase {
 
     private function setUpInstanceUserAnilDashUsernameChange() {
         $r = array('id'=>1, 'network_username'=>'anildash', 'network_user_id'=>'36824', 'network_viewer_id'=>'36824',
-        'last_post_id'=>'0', 'last_page_fetched_replies'=>0, 'last_page_fetched_tweets'=>'17',
+        'last_post_id'=>'0', 'last_reply_id'=>'1001',
         'total_posts_in_system'=>'0', 'total_replies_in_system'=>'0', 'total_follows_in_system'=>'0',
         'is_archive_loaded_replies'=>'0', 'is_archive_loaded_follows'=>'0', 'total_posts_by_owner'=>1,
         'crawler_last_run'=>'', 'earliest_reply_in_system'=>'',  'avg_replies_per_day'=>'2', 'is_public'=>'0',
@@ -169,7 +171,7 @@ class TestOfTwitterCrawler extends ThinkUpUnitTestCase {
         'is_protected'=>1, 'last_post_id'=>''));
 
         $r = array('id'=>1, 'network_username'=>'mcprivate', 'network_user_id'=>'123456', 'network_viewer_id'=>'123456',
-        'last_post_id'=>'0', 'last_page_fetched_replies'=>0, 'last_page_fetched_tweets'=>'17',
+        'last_post_id'=>'0', 'last_reply_id'=>'1001',
         'total_posts_in_system'=>'0', 'total_replies_in_system'=>'0', 'total_follows_in_system'=>'0',
         'is_archive_loaded_replies'=>'0', 'is_archive_loaded_follows'=>'0', 'total_posts_by_owner'=>1,
         'crawler_last_run'=>'', 'earliest_reply_in_system'=>'',  'avg_replies_per_day'=>'2', 'is_public'=>'0',
@@ -188,8 +190,8 @@ class TestOfTwitterCrawler extends ThinkUpUnitTestCase {
 
     private function setUpInstanceUserGinaTrapani() {
         $r = array('id'=>1, 'network_username'=>'ginatrapani', 'network_user_id'=>'930061',
-        'network_viewer_id'=>'930061', 'last_post_id'=>'0', 'last_page_fetched_replies'=>0,
-        'last_page_fetched_tweets'=>'0', 'total_posts_in_system'=>'0', 'total_replies_in_system'=>'0',
+        'network_viewer_id'=>'930061', 'last_post_id'=>'0', 'last_reply_id'=>'10001',
+        'total_posts_in_system'=>'0', 'total_replies_in_system'=>'0',
         'total_follows_in_system'=>'0', 'is_archive_loaded_replies'=>'0',
         'is_archive_loaded_follows'=>'0', 'crawler_last_run'=>'', 'earliest_reply_in_system'=>'',
         'avg_replies_per_day'=>'2', 'is_public'=>'0', 'is_active'=>'0', 'network'=>'twitter',
@@ -362,8 +364,6 @@ class TestOfTwitterCrawler extends ThinkUpUnitTestCase {
         self::setUpInstanceUserAmygdala();
         $user_builder = FixtureBuilder::build('users', array('user_id'=>'2768241', 'network'=>'twitter'));
 
-        $this->instance->last_page_fetched_tweets = 17;
-
         $twitter_crawler = new TwitterCrawler($this->instance, $this->api);
         $twitter_crawler->api->to->setDataPathFolder('testoftwittercrawler/retweets/');
         $twitter_crawler->fetchInstanceUserTweets();
@@ -430,8 +430,8 @@ class TestOfTwitterCrawler extends ThinkUpUnitTestCase {
         $this->assertTrue($group_member_dao->isGroupMemberInStorage($user = '36823', $group = '79854285', 'twitter'));
         $this->assertFalse($group_member_dao->isGroupMemberInStorage($user = '930061', $group = '79854285', 'twitter'));
 
-        $group_membership_count_dao = DAOFactory::getDAO('GroupMembershipCountDAO');
-        $history = $group_membership_count_dao->getHistory($user = '36823', 'twitter', 'DAYS');
+        $count_history_dao = DAOFactory::getDAO('CountHistoryDAO');
+        $history = $count_history_dao->getHistory($user = '36823', 'twitter', 'DAYS', null, 'group_memberships');
         $this->assertEqual(count($history['history']), 1);
     }
 
@@ -466,6 +466,22 @@ class TestOfTwitterCrawler extends ThinkUpUnitTestCase {
         $this->assertEqual($updated_user->full_name, 'Teddy Goff');
         $this->assertEqual($updated_user->description,
         "Digital Director, Obama for America // Teddy dot goff at gmail dot com");
+    }
+
+    public function testUpdateFriendsProfiles() {
+        $this->debug(__METHOD__);
+        self::setUpInstanceUserAnilDash();
+        $twitter_crawler = new TwitterCrawler($this->instance, $this->api);
+        $twitter_crawler->api->to->setDataPathFolder('testoftwittercrawler/anildash/');
+
+        $twitter_crawler->updateFriendsProfiles();
+
+        $user_dao = DAOFactory::getDAO('UserDAO');
+        $updated_user = $user_dao->getUserByName('ginatrapani', 'twitter');
+        $this->debug(Utils::varDumpToString($updated_user));
+        $this->assertEqual($updated_user->full_name, 'Gina Trapani');
+        $this->assertEqual($updated_user->description,
+            "I make @ThinkUp & @todotxt. Back in the day I started @Lifehacker.");
     }
 
     public function testFetchInstanceUserFollowersByIds() {
@@ -565,8 +581,8 @@ class TestOfTwitterCrawler extends ThinkUpUnitTestCase {
 
     private function setUpInstanceUserEduardCucurella() {
         $r = array('id'=>1, 'network_username'=>'ecucurella', 'network_user_id'=>'13771532',
-            'network_viewer_id'=>'13771532', 'last_post_id'=>'0', 'last_page_fetched_replies'=>0,
-            'last_page_fetched_tweets'=>'0', 'total_posts_in_system'=>'0', 'total_replies_in_system'=>'0',
+            'network_viewer_id'=>'13771532', 'last_post_id'=>'0', 'last_reply_id'=>'10001',
+            'total_posts_in_system'=>'0', 'total_replies_in_system'=>'0',
             'total_follows_in_system'=>'0', 'is_archive_loaded_replies'=>'0',
             'is_archive_loaded_follows'=>'0', 'crawler_last_run'=>'', 'earliest_reply_in_system'=>'',
             'avg_replies_per_day'=>'0', 'is_public'=>'0', 'is_active'=>'1', 'network'=>'twitter',
@@ -784,6 +800,95 @@ class TestOfTwitterCrawler extends ThinkUpUnitTestCase {
         $res = $link_dao->getLinksForPost('307436651154665473','twitter');
         $this->assertEqual(sizeof($res), 1);
         $this->assertEqual($res[0]->url, 'http://t.co/8yet1gjfDm');
+    }
+
+    public function testCleanUpFollowsDeactivateDueToError163() {
+        $this->debug(__METHOD__);
+        self::setUpInstanceUserEduardCucurella();
+        // First test that the existing data is correct
+        $follow_dao = DAOFactory::getDAO('FollowDAO');
+        $this->assertTrue($follow_dao->followExists('930061', '36823', 'twitter', true));
+        // Set up a Twitter Crawler to get the mocked Error 403 & API Error 163
+        $twitter_crawler = new TwitterCrawler($this->instance, $this->api);
+        $twitter_crawler->api->to->setDataPathFolder('testoftwittercrawler/ecucurella-163/');
+        // Call cleanUpFollows which should set the follow to inactive
+        $twitter_crawler->cleanUpFollows();
+        // Now check the data is as expected
+        $this->assertFalse($follow_dao->followExists('930061', '36823', 'twitter', true));
+    }
+
+    public function testCleanUpFollowsReactivate() {
+        $this->debug(__METHOD__);
+        self::setUpInstanceUserEduardCucurella();
+        // First test that the existing data is correct
+        $follow_dao = DAOFactory::getDAO('FollowDAO');
+        $follow_dao->deactivate('930061', '36823', 'twitter');
+        $this->assertFalse($follow_dao->followExists('930061', '36823', 'twitter', true));
+        // Set up a Twitter crawler
+        $twitter_crawler = new TwitterCrawler($this->instance, $this->api);
+        $twitter_crawler->api->to->setDataPathFolder('testoftwittercrawler/ecucurella/');
+        // Call cleanUpFollows which should set the follow to inactive
+        $twitter_crawler->cleanUpFollows();
+        // Now check the data is as expected
+        $this->assertFalse($follow_dao->followExists('930061', '36823', 'twitter', true));
+    }
+
+    public function testMediaHandling() {
+        $r = array('id'=>1, 'network_username'=>'ecucurella', 'network_user_id'=>'13771532',
+            'network_viewer_id'=>'13771532', 'last_post_id'=>'0', 'last_reply_id'=>'10001',
+            'total_posts_in_system'=>'0', 'total_replies_in_system'=>'0',
+            'total_follows_in_system'=>'0', 'is_archive_loaded_replies'=>'0',
+            'is_archive_loaded_follows'=>'0', 'crawler_last_run'=>'', 'earliest_reply_in_system'=>'',
+            'avg_replies_per_day'=>'0', 'is_public'=>'0', 'is_active'=>'1', 'network'=>'twitter',
+            'last_favorite_id' => '0', 'favorites_profile' => '0', 'owner_favs_in_system' => '0',
+            'total_posts_by_owner'=>0, 'posts_per_day'=>1, 'posts_per_week'=>1, 'percentage_replies'=>50,
+            'percentage_links'=>50, 'earliest_post_in_system'=>'2009-01-01 13:48:05');
+        $this->instance = new TwitterInstance($r);
+        $this->api = new CrawlerTwitterAPIAccessorOAuth($oauth_token='111', $oauth_token_secret='222',
+            $oauth_consumer_key = 'fake_key', $oauth_consumer_secret ='fake_secret', $archive_limit= 3200,
+            $num_twitter_errors=2);
+        $this->instance->is_archive_loaded_follows = true;
+
+        $post_dao = DAOFactory::getDAO('PostDAO');
+        $link_dao = DAOFactory::getDAO('LinkDAO');
+
+        $twitter_crawler = new TwitterCrawler($this->instance, $this->api);
+        $twitter_crawler->api->to->setDataPathFolder('testoftwittercrawler/cdmoyer/');
+        $twitter_crawler->fetchInstanceUserTweets();
+
+        $post_dao = DAOFactory::getDAO('PostDAO');
+
+        // NOrmal photo
+        $post = $post_dao->getPost("471310898695794688", 'twitter');
+        $this->assertNotNull($post);
+        $this->assertEqual("Just hanging out under the couch, like you do. http://t.co/1z8GGl5Zrv", $post->post_text);
+        $this->assertEqual(1, count($post->links));
+        $this->assertEqual('http://pbs.twimg.com/media/Bopuw9BIEAAAYVN.jpg', $post->links[0]->image_src);
+        $this->assertEqual('http://t.co/1z8GGl5Zrv', $post->links[0]->url);
+        $this->assertEqual('http://twitter.com/CDMoyer/status/471310898695794688/photo/1',
+            $post->links[0]->expanded_url);
+
+
+        // Normal Photo
+        $post = $post_dao->getPost("458015480960532480", 'twitter');
+        $this->assertEqual('http://pbs.twimg.com/media/BlsypxzIIAAwgnw.jpg', $post->links[0]->image_src);
+        $this->assertEqual('http://t.co/gELt0NIzCx', $post->links[0]->url);
+        $this->assertEqual('http://twitter.com/CDMoyer/status/458015480960532480/photo/1',
+            $post->links[0]->expanded_url);
+
+        // Photo and link in retweet
+        $post = $post_dao->getPost("462748167357091840", 'twitter');
+        $this->assertEqual(2, count($post->links));
+        $this->assertEqual('http://t.co/uGLsKU8Qkc', $post->links[0]->url);
+        $this->assertEqual('',$post->links[0]->expanded_url);
+        $this->assertEqual('http://t.co/wpdAD4iQzB', $post->links[1]->url);
+        $this->assertEqual('http://twitter.com/pourmecoffee/status/462748167357091840/photo/1',
+            $post->links[1]->expanded_url);
+        $this->assertEqual('http://pbs.twimg.com/media/BmwDAUoCIAAM_H4.jpg',$post->links[1]->image_src);
+
+        // Nothing
+        $post = $post_dao->getPost("454606554801524736", 'twitter');
+        $this->assertEqual(0, count($post->links));
     }
 
     public function buildDataPostUser() {

@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/TestOfForgotPasswordController.php
  *
- * Copyright (c) 2009-2013 Gina Trapani, Michael Louis Thaler
+ * Copyright (c) 2009-2016 Gina Trapani, Michael Louis Thaler
  *
  * LICENSE:
  *
@@ -24,7 +24,7 @@
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  * @author Michael Louis Thaler <michael[dot]louis[dot]thaler[at]gmail[dot]com>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani, Michael Louis Thaler
+ * @copyright 2009-2016 Gina Trapani, Michael Louis Thaler
  */
 
 require_once dirname(__FILE__).'/init.tests.php';
@@ -56,12 +56,12 @@ class TestOfForgotPasswordController extends ThinkUpUnitTestCase {
         $controller = new ForgotPasswordController(true);
         $result = $controller->go();
 
-        $this->assertPattern('/Reset Your Password/', $result);
+        $this->assertPattern('/Reset your password/', $result);
     }
 
     public function testOfControllerWithBadEmailAddress() {
         $_POST['email'] = 'im a broken email address';
-        $_POST['Submit'] = "Send Reset";
+        $_POST['Submit'] = "Send";
 
         $controller = new ForgotPasswordController(true);
         $result = $controller->go();
@@ -75,7 +75,7 @@ class TestOfForgotPasswordController extends ThinkUpUnitTestCase {
         $config->setValue('app_title_prefix', '');
         $site_root_path = $config->getValue('site_root_path');
         $_POST['email'] = 'me@example.com';
-        $_POST['Submit'] = "Send Reset";
+        $_POST['Submit'] = "Send";
         $_SERVER['HTTP_HOST'] = "mytestthinkup";
         $controller = new ForgotPasswordController(true);
         $result = $controller->go();
@@ -98,7 +98,7 @@ http:\/\/mytestthinkup'.str_replace('/', '\/', $site_root_path).'session\/reset.
         $config->setValue('app_title_prefix', "Angelina Jolie's ");
         $site_root_path = $config->getValue('site_root_path');
         $_POST['email'] = 'me@example.com';
-        $_POST['Submit'] = "Send Reset";
+        $_POST['Submit'] = "Send";
         $_SERVER['HTTP_HOST'] = "mytestthinkup";
         $controller = new ForgotPasswordController(true);
         $result = $controller->go();
@@ -121,7 +121,7 @@ http:\/\/mytestthinkup'.str_replace('/', '\/', $site_root_path).'session\/reset.
         $config->setValue('app_title_prefix', '');
         $site_root_path = $config->getValue('site_root_path');
         $_POST['email'] = 'me@example.com';
-        $_POST['Submit'] = "Send Reset";
+        $_POST['Submit'] = "Send";
         $_SERVER['HTTP_HOST'] = "mytestthinkup";
         $_SERVER['HTTPS'] = true;
         $controller = new ForgotPasswordController(true);
@@ -166,5 +166,15 @@ https:\/\/mytestthinkup'.str_replace('/', '\/', $site_root_path).'session\/reset
         $v_mgr = $controller->getViewManager();
         $this->assertEqual($v_mgr->getTemplateDataItem('is_registration_open'), false);
         $this->assertNoPattern('/Register/', $result);
+    }
+
+    public function testOfThinkUpLLCRedirect() {
+        $config = Config::getInstance();
+        $config->setValue('thinkupllc_endpoint', 'http://example.com/user/');
+
+        $controller = new ForgotPasswordController(true);
+        $result = $controller->go();
+
+        $this->assertEqual($controller->redirect_destination, 'http://example.com/user/forgot.php');
     }
 }

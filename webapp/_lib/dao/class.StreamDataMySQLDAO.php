@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/model/class.StreamDataMySQLDAO.php
  *
- * Copyright (c) 2011-2013 Amy Unruh
+ * Copyright (c) 2011-2016 Amy Unruh
  *
  * LICENSE:
  *
@@ -21,7 +21,7 @@
  * <http://www.gnu.org/licenses/>.
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2011-2013 Amy Unruh
+ * @copyright 2011-2016 Amy Unruh
  * @author Amy Unruh
  */
 class StreamDataMySQLDAO extends PDODAO implements StreamDataDAO {
@@ -82,7 +82,15 @@ class StreamDataMySQLDAO extends PDODAO implements StreamDataDAO {
     }
 
     public function resetID() {
-        $q = "ALTER TABLE #prefix#stream_data auto_increment = 1";
+        /**
+        * Modified this ALTER to TRUNCATE due to not being able to reset auto_increment to 1. As per:
+        * http://dev.mysql.com/doc/refman/5.6/en/alter-table.html
+        * "You cannot reset the counter to a value less than or equal to to the value that is currently in use. For both
+        * InnoDB and MyISAM, if the value is less than or equal to the maximum value currently in the AUTO_INCREMENT
+        * column, the value is reset to the current maximum AUTO_INCREMENT column value plus one."
+        */
+        //$q = "ALTER TABLE #prefix#stream_data auto_increment = 1";
+        $q = "TRUNCATE TABLE #prefix#stream_data";
         if ($this->profiler_enabled) { Profiler::setDAOMethod(__METHOD__); }
         $ps = $this->execute($q);
     }

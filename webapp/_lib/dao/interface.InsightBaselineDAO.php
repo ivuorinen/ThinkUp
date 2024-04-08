@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/model/interface.InsightBaselineDAO.php
  *
- * Copyright (c) 2012-2013 Gina Trapani
+ * Copyright (c) 2012-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -23,7 +23,7 @@
  * Insight Baseline Data Access Object
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2012-2013 Gina Trapani
+ * @copyright 2012-2016 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  */
 interface InsightBaselineDAO {
@@ -68,4 +68,20 @@ interface InsightBaselineDAO {
      * @return bool
      */
     public function doesInsightBaselineExist($slug, $instance_id);
+
+    /**
+     * Determine if a given insight baseline was created for a particula instance, before a specified date
+     * @param str $slug The baseline slug name
+     * @param int $instance_id The instance
+     * @return bool Does a baseline exist?
+     */
+    public function doesInsightBaselineExistBefore($slug, $instance_id, $before_date);
+
+    /**
+     * For a given slug and instance, get the latest baseline
+     * @param str $slug The baseline slug name
+     * @param int $instance_id The instance
+     * @return InsightBaseline the lastest InsightBaseline (if any)
+     */
+    public function getMostRecentInsightBaseline($slug, $instance_id);
 }

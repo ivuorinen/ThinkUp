@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/WebTestOfLogin.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -23,7 +23,7 @@
  *
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  */
 require_once dirname(__FILE__).'/init.tests.php';
 require_once THINKUP_WEBAPP_PATH.'_lib/extlib/simpletest/autorun.php';
@@ -42,16 +42,17 @@ class WebTestOfLogin extends ThinkUpWebTestCase {
         parent::tearDown();
     }
 
-    public function testLoginSuccessAndPrivateDashboard() {
-        $this->get($this->url.'/session/login.php');
-        $this->setField('email', 'me@example.com');
-        $this->setField('pwd', 'secretpassword');
-        $this->click("Log In");
-        $this->get($this->url.'/dashboard.php');
+    public function testLoginByCookie() {
+        $email = 'me@example.com';
+        $cookie_dao = DAOFactory::getDao('CookieDAO');
+        $cookie = $cookie_dao->generateForEmail($email);
 
-        $this->assertTitle("thinkupapp's Dashboard | " . Config::getInstance()->getValue('app_title_prefix') .
-        "ThinkUp");
-        $this->assertText('Logged in as admin: me@example.com');
+        $this->get($this->url.'/index.php');
+        $this->assertNoText($email);
+        $this->getBrowser()->setCookie(Session::COOKIE_NAME, $cookie);
+
+        $this->get($this->url.'/index.php');
+        $this->assertText($email);
     }
 
     public function testLoginFailureAttemptThenSuccess() {
@@ -60,22 +61,22 @@ class WebTestOfLogin extends ThinkUpWebTestCase {
         $this->setField('pwd', 'wrongemail');
         $this->click("Log In");
 
-        $this->assertText('Incorrect email');
+        $this->assertPattern("/Hmm\, that email seems wrong\./");
 
         $this->setField('email', 'me@example.com');
         $this->setField('pwd', 'wrongpassword');
         $this->click("Log In");
 
-        $this->assertText('Incorrect password');
+        $this->assertPattern("/Hmm\, that password seems wrong\./");
         $this->assertField('email', 'me@example.com');
 
         $this->setField('pwd', 'secretpassword');
         $this->click("Log In");
 
-        $this->get($this->url.'/dashboard.php');
-        $this->assertTitle("thinkupapp's Dashboard | " . Config::getInstance()->getValue('app_title_prefix') .
+        $this->get($this->url.'/index.php');
+        $this->assertTitle(Config::getInstance()->getValue('app_title_prefix') .
         "ThinkUp");
-        $this->assertText('Logged in as admin: me@example.com');
+        $this->assertText('me@example.com');
     }
 
     public function testLoginLockout() {
@@ -88,10 +89,10 @@ class WebTestOfLogin extends ThinkUpWebTestCase {
             //$this->showSource();
 
             if ($i < 10) {
-                $this->assertText('Incorrect password');
+                $this->assertPattern("/Hmm\, that password seems wrong\./");
                 $this->assertField('email', 'me@example.com');
             } else {
-                $this->assertText("Inactive account. Account deactivated due to too many failed logins.");
+                $this->assertPattern("/Inactive account. Account deactivated due to too many failed logins./");
             }
             $i = $i + 1;
         }

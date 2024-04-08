@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/plugins/insightsgenerator/controller/class.InsightsGeneratorPluginConfigurationController.php
  *
- * Copyright (c) 2012-2013 Gina Trapani
+ * Copyright (c) 2012-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -25,7 +25,7 @@
  * Renders the Insights Generator plugin settings area.
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2012-2013 Gina Trapani
+ * @copyright 2012-2016 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  */
 
@@ -45,6 +45,11 @@ class InsightsGeneratorPluginConfigurationController extends PluginConfiguration
         $this->view_mgr->addHelp('insightsgenerator', 'contribute/developers/plugins/buildplugin');
         $installed_plugins = $this->getInstalledInsightPlugins();
         $this->addToView('installed_plugins', $installed_plugins);
+
+        $mandrill_template = array('name' => 'mandrill_template', 'label' => 'Mandrill Template Name',
+        'advanced' => true);
+        $this->addPluginOption(self::FORM_TEXT_ELEMENT, $mandrill_template);
+
         return $this->generateView();
     }
 
@@ -77,6 +82,9 @@ class InsightsGeneratorPluginConfigurationController extends PluginConfiguration
                 }
                 if (preg_match('/Description:(.*)/', $line, $m)) {
                     $plugin_vals['description'] = trim($m[1]);
+                }
+                if (preg_match('/When:(.*)/', $line, $m)) {
+                    $plugin_vals['when'] = trim($m[1]);
                 }
             }
             return $plugin_vals;

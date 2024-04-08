@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/WebTestOfRegistration.php
  *
- * Copyright (c) 2011-2013 Gina Trapani
+ * Copyright (c) 2011-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -23,7 +23,7 @@
  *
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2011-2013 Gina Trapani
+ * @copyright 2011-2016 Gina Trapani
  */
 require_once dirname(__FILE__).'/init.tests.php';
 require_once THINKUP_WEBAPP_PATH.'_lib/extlib/simpletest/autorun.php';
@@ -49,7 +49,8 @@ class WebTestOfRegistration extends ThinkUpWebTestCase {
 
     public function testRegistrationClosedByDefault() {
         $this->get($this->url.'/session/register.php');
-        $this->assertText('Sorry, registration is closed on this installation of');
+        $this->assertText('Sorry!');
+        $this->assertText('Registration is closed for ');
     }
 
     public function testSuccessfulRegistration() {
@@ -69,7 +70,7 @@ class WebTestOfRegistration extends ThinkUpWebTestCase {
 
         $this->assertNoText('Sorry, registration is closed on this installation of');
         //$this->showSource();
-        $this->assertText('Success! Check your email for an activation link.');
+        $this->assertPattern("/Success! Check your email for an activation link./");
     }
 
     public function testInvalidInputsRegistration() {
@@ -90,21 +91,24 @@ class WebTestOfRegistration extends ThinkUpWebTestCase {
         $this->assertNoText('Success! Check your email for an activation link.');
         $this->assertNoText('Sorry, registration is closed on this ThinkUp installation.');
         //$this->showSource();
-        $this->assertText('Entered text didn\'t match the image. Please try again.');
-        $this->assertText('Passwords do not match.');
-        $this->assertText('Incorrect email. Please enter valid email address.');
+        $this->assertPattern("/Hmm, that code did not match the image\. Please try again?/");
+        $this->assertPattern("/Passwords do not match\./");
+        $this->assertPattern("/Sorry, that email address looks wrong\./");
     }
 
     public function testInvalidInvitationCode() {
         $this->get($this->url.'/session/register.php?code=invalidcode');
-        $this->assertText('Sorry, registration is closed on this installation of');
+        $this->assertPattern("/Sorry, registration is closed on /");
     }
 
     public function testValidInvitationCode() {
+        //Open registration
+        $builders[] = FixtureBuilder::build('options', array('namespace'=>'application_options',
+        'option_name'=>'is_registration_open', 'option_value'=>'true'));
         $invite_dao = new InviteMySQLDAO();
         $invite_dao->addInviteCode('aabbddcc');
         $this->get($this->url.'/session/register.php?code=aabbddcc');
-        $this->assertNoText('Sorry, registration is closed on this ThinkUp installation.');
+        $this->assertNoPattern("/Sorry, registration is closed on /");
 
         $this->setFieldById('full_name', 'Test User');
         $this->setFieldById('email', 'TestUser@example.com');
@@ -113,8 +117,8 @@ class WebTestOfRegistration extends ThinkUpWebTestCase {
         $this->setFieldById('user_code', '123456');
         $this->clickSubmitById('login-save');
 
-        $this->assertNoText('Sorry, registration is closed on this ThinkUp installation.');
-        //        $this->showSource();
-        $this->assertText('Success! Check your email for an activation link.');
+        $this->assertNoPattern("/Sorry, registration is closed on /");
+               // $this->showSource();
+        $this->assertPattern("/Success! Check your email for an activation link\./");
     }
 }

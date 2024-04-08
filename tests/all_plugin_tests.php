@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/all_plugin_tests.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -23,7 +23,7 @@
  *
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  */
 include 'init.tests.php';
 require_once THINKUP_WEBAPP_PATH.'_lib/extlib/simpletest/autorun.php';
@@ -31,17 +31,15 @@ require_once THINKUP_WEBAPP_PATH.'_lib/extlib/simpletest/web_tester.php';
 require_once THINKUP_WEBAPP_PATH.'_lib/extlib/simpletest/mock_objects.php';
 
 $RUNNING_ALL_TESTS = true;
-
+$version = explode('.', PHP_VERSION); //dont run redis test for php less than 5.3
 $plugin_tests = new TestSuite('Plugin tests');
 $plugin_tests->add(new TestOfExpandURLsPlugin());
 $plugin_tests->add(new TestOfExpandURLsPluginConfigurationController());
 $plugin_tests->add(new TestOfFlickrAPIAccessor());
 $plugin_tests->add(new TestOfFacebookCrawler());
 $plugin_tests->add(new TestOfFacebookPlugin());
+$plugin_tests->add(new TestOfFacebookInstanceMySQLDAO());
 $plugin_tests->add(new TestOfFacebookPluginConfigurationController());
-$plugin_tests->add(new TestOfGeoEncoderPlugin());
-$plugin_tests->add(new TestOfGeoEncoderPluginConfigurationController());
-$plugin_tests->add(new TestOfMapController());
 $plugin_tests->add(new TestOfTwitterAPIAccessorOAuth());
 $plugin_tests->add(new TestOfTwitterAPIEndpoint());
 $plugin_tests->add(new TestOfTwitterCrawler());
@@ -54,33 +52,67 @@ $plugin_tests->add(new TestOfRetweetDetector());
 $plugin_tests->add(new TestOfHelloThinkUpPluginConfigurationController());
 $plugin_tests->add(new TestOfHelloThinkUpPlugin());
 $plugin_tests->add(new TestOfSmartyModifierLinkUsernames());
-$plugin_tests->add(new TestOfTwitterJSONStreamParser());
-$plugin_tests->add(new TestOfTwitterRealtimePluginConfigurationController());
-$plugin_tests->add(new TestOfTwitterRealtimePlugin());
-$plugin_tests->add(new TestOfStreamMessageQueueMySQL());
-$plugin_tests->add(new TestOfConsumerUserStream());
-$plugin_tests->add(new TestOfConsumerStreamProcess());
-$plugin_tests->add(new TestOfStreamMessageQueueFactory());
-$plugin_tests->add(new TestOfGooglePlusPlugin());
-$plugin_tests->add(new TestOfGooglePlusCrawler());
-$plugin_tests->add(new TestOfGooglePlusPluginConfigurationController());
-$plugin_tests->add(new TestOfFoursquarePlugin());
-$plugin_tests->add(new TestOfFoursquareCrawler());
-$plugin_tests->add(new TestOfFoursquarePluginConfigurationController());
+$plugin_tests->add(new TestOfInstagramPlugin());
+$plugin_tests->add(new TestOfInstagramInstanceMySQLDAO());
+$plugin_tests->add(new TestOfInstagramCrawler());
+$plugin_tests->add(new TestOfInstagramPluginConfigurationController());
+$plugin_tests->add(new TestOfInsightPluginParent());
+$plugin_tests->add(new TestOfInsightsGeneratorPluginConfigurationController());
+$plugin_tests->add(new TestOfInsightsGeneratorPlugin());
 //Insights
-$plugin_tests->add(new TestOfArchivedPostsInsight());
 $plugin_tests->add(new TestOfAllAboutYouInsight());
 $plugin_tests->add(new TestOfBigReshareInsight());
+$plugin_tests->add(new TestOfBiggestFansInsight());
 $plugin_tests->add(new TestOfClickSpikeInsight());
 $plugin_tests->add(new TestOfFrequencyInsight());
+//$plugin_tests->add(new TestOfGenderAnalysisInsight());
 $plugin_tests->add(new TestOfListMembershipInsight());
-$plugin_tests->add(new TestOfMapInsight());
 $plugin_tests->add(new TestOfSavedSearchResultsInsight());
 $plugin_tests->add(new TestOfStyleStatsInsight());
-$version = explode('.', PHP_VERSION); //dont run redis test for php less than 5.3
-if ($version[0] >= 5 && $version[1] >= 3) { //only run Redis tests if PHP 5.3
-    $plugin_tests->add(new TestOfStreamMessageQueueRedis());
-}
+$plugin_tests->add(new TestOfMetweetInsight());
+//$plugin_tests->add(new TestOfInteractionsInsight());
+$plugin_tests->add(new TestOfWeeklyBestsInsight());
+$plugin_tests->add(new TestOfResponseTimeInsight());
+$plugin_tests->add(new TestOfFavoritedLinksInsight());
+$plugin_tests->add(new TestOfFavoriteFlashbacksInsight());
+$plugin_tests->add(new TestOfLongLostContactsInsight());
+$plugin_tests->add(new TestOfLinkPromptInsight());
+$plugin_tests->add(new TestOfOutreachPunchcardInsight());
+$plugin_tests->add(new TestOfSplitOpinionsInsight());
+$plugin_tests->add(new TestOfViewDurationInsight());
+$plugin_tests->add(new TestOfLikeSpikeInsight());
+$plugin_tests->add(new TestOfViewSpikeInsight());
+$plugin_tests->add(new TestOfSubscriberChangeInsight());
+$plugin_tests->add(new TestOfMinutesViewedInsight());
+$plugin_tests->add(new TestOfBiggestFansInsight());
+$plugin_tests->add(new TestOfFlashbackInsight());
+$plugin_tests->add(new TestOfFollowerCountHistoryInsight());
+$plugin_tests->add(new TestOfWeeklyGraphInsight());
+$plugin_tests->add(new TestOfInterestingFollowersInsight());
+$plugin_tests->add(new TestOfThanksCountInsight());
+$plugin_tests->add(new TestOfLOLCountInsight());
+//$plugin_tests->add(new TestOfFBombCountInsight());
+$plugin_tests->add(new TestOfActivitySpikeInsight());
+$plugin_tests->add(new TestOfFollowCountVisualizerInsight());
+$plugin_tests->add(new TestOfCongratsCountInsight());
+$plugin_tests->add(new TestOfTimeSpentInsight());
+$plugin_tests->add(new TestOfTwitterAgeInsight());
+$plugin_tests->add(new TestOfTwitterBirthdayInsight());
+$plugin_tests->add(new TestOfPhotoPromptInsight());
+$plugin_tests->add(new TestOfExclamationCountInsight());
+$plugin_tests->add(new TestOfMetaPostsCountInsight());
+$plugin_tests->add(new TestOfFacebookProfilePromptInsight());
+$plugin_tests->add(new TestOfLocationAwarenessInsight());
+$plugin_tests->add(new TestOfBioTrackerInsight());
+$plugin_tests->add(new TestOfNewDictionaryWordsInsight());
+$plugin_tests->add(new TestOfFollowerComparisonInsight());
+$plugin_tests->add(new TestOfDiversifyLinksInsight());
+//$plugin_tests->add(new TestOfAgeAnalysisInsight());
+$plugin_tests->add(new TestOfTopWordsInsight());
+$plugin_tests->add(new TestOfBestieInsight());
+// Don't run the developer insight test every time
+// $plugin_tests->add(new TestOfHelloThinkUpInsight());
+
 
 $tr = new TextReporter();
 $start =  ((float)$usec + (float)$sec);

@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/class.PluginRegistrarInsights.php
  *
- * Copyright (c) 2012-2013 Gina Trapani
+ * Copyright (c) 2012-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -25,7 +25,7 @@
  * Singleton provides hooks for insight plugins.
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2012-2013 Gina Trapani
+ * @copyright 2012-2016 Gina Trapani
  * @author Gina Trapani
  */
 class PluginRegistrarInsights extends PluginRegistrar {
@@ -56,16 +56,18 @@ class PluginRegistrarInsights extends PluginRegistrar {
     /**
      * Runs the generateInsight function on all registered plugins.
      * @param Instance $instance
+     * @param User $user User associated with the instance
      * @param arr last week of Post objects
      * @param int $number_days Number of days to backfill with insights
      * @throws UnauthorizedUserException
      * @return void
      */
-    public function runRegisteredPluginsInsightGeneration(Instance $instance, $last_week_of_posts, $number_days) {
+    public function runRegisteredPluginsInsightGeneration(Instance $instance, User $user, $last_week_of_posts,
+        $number_days) {
         if (!Session::isLoggedIn() ) {
             throw new UnauthorizedUserException('You need a valid session to generate insights.');
         }
-        $this->emitObjectFunction('generateInsight', array($instance, $last_week_of_posts, $number_days));
+        $this->emitObjectFunction('generateInsight', array($instance, $user, $last_week_of_posts, $number_days));
     }
     /**
      * Register insight plugin.

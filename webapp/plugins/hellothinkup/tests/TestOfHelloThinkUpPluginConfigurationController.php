@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/plugins/hellothinkup/tests/TestOfHelloThinkUpPluginConfigurationController.php
  *
- * Copyright (c) 2009-2013 Gina Trapani, Mark Wilkie
+ * Copyright (c) 2009-2016 Gina Trapani, Mark Wilkie
  *
  * LICENSE:
  *
@@ -24,7 +24,7 @@
  * Test of TestOfHelloThinkUpPluginConfigurationController
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani, Mark Wilkie
+ * @copyright 2009-2016 Gina Trapani, Mark Wilkie
  * @author Mark Wilkie <mwilkie[at]gmail[dot]com>
  *
  */
@@ -57,10 +57,7 @@ class TestOfHelloThinkUpPluginConfigurationController extends ThinkUpUnitTestCas
         //not logged in, no owner set
         $controller = new HelloThinkUpPluginConfigurationController(null, 'hellothinkup');
         $output = $controller->go();
-        $v_mgr = $controller->getViewManager();
-        $config = Config::getInstance();
-        $this->assertEqual('You must <a href="'.$config->getValue('site_root_path').
-        'session/login.php">log in</a> to do this.', $v_mgr->getTemplateDataItem('error_msg'));
+        $this->assertPattern( '/session\/login.php\?redirect\=/', $controller->redirect_destination);
 
         // logged in
         // build a user
@@ -75,7 +72,6 @@ class TestOfHelloThinkUpPluginConfigurationController extends ThinkUpUnitTestCas
         $message = $v_mgr->getTemplateDataItem('message');
         $this->assertEqual($message,
         'Hello ThinkUp world! This is an example plugin configuration page for  me@example.com.');
-
     }
 
     public function testTextInputSize() {

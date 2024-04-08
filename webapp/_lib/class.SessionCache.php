@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/class.SessionCache.php
  *
- * Copyright (c) 2011-2013 Gina Trapani
+ * Copyright (c) 2011-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -26,11 +26,34 @@
  * PHP $_SESSION accessor.
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2011-2013 Gina Trapani
+ * @copyright 2011-2016 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  *
  */
 class SessionCache {
+    /**
+     * Start the session system running. If use_db_sessions is set to true in the config file, store session data
+     * in the datbase.
+     * @return void
+     */
+    public static function init() {
+        $config = Config::getInstance();
+        if ($config->getValue('use_db_sessions')) {
+            $session_dao = DAOFactory::getDAO('SessionDAO');
+            session_set_save_handler(
+                array($session_dao, 'open'),
+                array($session_dao, 'close'),
+                array($session_dao, 'read'),
+                array($session_dao, 'write'),
+                array($session_dao, 'destroy'),
+                array($session_dao, 'gc')
+            );
+            // the following prevents unexpected effects when using objects as save handlers
+            register_shutdown_function('session_write_close');
+        }
+        session_start();
+    }
+
     /**
      * Put a value in ThinkUp's $_SESSION key.
      * @param str $key

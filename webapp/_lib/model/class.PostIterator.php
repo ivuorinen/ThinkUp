@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/model/class.PostIterator.php
  *
- * Copyright (c) 2009-2013 Mark Wilkie
+ * Copyright (c) 2009-2016 Mark Wilkie
  *
  * LICENSE:
  *
@@ -26,7 +26,7 @@
  * Used to iterate through the cursor of SQL results for Posts.
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Mark Wilkie
+ * @copyright 2009-2016 Mark Wilkie
  * @author Mark Wilkie <mwilkie[at]gmail[dot]com>
  */
 class PostIterator implements Iterator {
@@ -93,6 +93,13 @@ class PostIterator implements Iterator {
             if ($row) {
                 $post = new Post($row);
                 $this->row = $post;
+
+                //If there are link fields, instantiate Link object and add it to the post
+                if (isset($row['url'])) {
+                    $link = new Link($row);
+                    $post->addLink($link);
+                }
+
                 $this->valid = true;
             } else {
                 // close our cursor...

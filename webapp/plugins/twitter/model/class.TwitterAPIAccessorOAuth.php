@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/plugins/twitter/model/class.TwitterAPIAccessorOAuth.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -25,7 +25,7 @@
  * Accesses the Twitter.com API via OAuth authentication.
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  */
 class TwitterAPIAccessorOAuth {
@@ -242,6 +242,19 @@ class TwitterAPIAccessorOAuth {
         return null;
     }
     /**
+     * Convert JSON errors codes to array.
+     * @param str $error_data
+     * @return array
+     */
+    public function parseJSONErrorCodeAPI($error_data) {
+        $json = JSONDecoder::decode($error_data);
+        $parsed_payload = array();
+        if (isset($json->errors)) {
+            $parsed_payload['error'] = $json->errors[0]->code;
+        }
+        return $parsed_payload;
+    }
+    /**
      * Convert JSON representation of tweet to an array.
      * @param str $json_tweet
      * @return array Post values
@@ -263,7 +276,8 @@ class TwitterAPIAccessorOAuth {
             'post_text'=>$json_tweet->text,
             'author_username'=>$json_tweet->user->screen_name,
             'user_name'=>$json_tweet->user->screen_name,
-            'in_reply_to_user_id'=>((isset($json_tweet->to_user_id))?$json_tweet->to_user_id:''),
+            'in_reply_to_user_id'=>((isset($json_tweet->in_reply_to_user_id_str))?
+        $json_tweet->in_reply_to_user_id_str:''),
             'author_avatar'=>$json_tweet->user->profile_image_url,
             'avatar'=>$json_tweet->user->profile_image_url,
             'in_reply_to_post_id'=> ((isset($json_tweet->in_reply_to_status_id_str))?
@@ -274,6 +288,7 @@ class TwitterAPIAccessorOAuth {
             'location'=>$json_tweet->user->location,
             'url'=>(isset($json_tweet->user->url)?$json_tweet->user->url:''),
             'description'=>$json_tweet->user->description,
+            'is_verified'=>self::boolToInt($json_tweet->user->verified),
             'is_protected'=>self::boolToInt($json_tweet->user->protected),
             'follower_count'=>$json_tweet->user->followers_count,
             'post_count'=>$json_tweet->user->statuses_count,
@@ -282,7 +297,7 @@ class TwitterAPIAccessorOAuth {
             'friend_count'=> (integer)$json_tweet->user->friends_count,
             'joined'=> (string)gmdate("Y-m-d H:i:s", strToTime($json_tweet->user->created_at)),
             'favorites_count'=>(integer)$json_tweet->user->favourites_count,
-            'favorited'=> (integer)self::boolToInt($json_tweet->favorited),
+            'favlike_count_cache'=> ((isset($json_tweet->favorite_count))? (integer)$json_tweet->favorite_count:0),
             'network'=>'twitter'
             );
 
@@ -308,6 +323,17 @@ class TwitterAPIAccessorOAuth {
                 $result['retweeted_post'] = $rtp;
                 $result['in_retweet_of_post_id'] = $json_tweet->retweeted_status->id_str;
                 $result['in_rt_of_user_id'] = $json_tweet->retweeted_status->user->id_str;
+            }
+            if (!empty($json_tweet->entities->media)) {
+                $photos = array();
+                foreach ($json_tweet->entities->media as $media) {
+                    if ($media->type == 'photo') {
+                        $photos[] = $media;
+                    }
+                }
+                if (count($photos) > 0) {
+                    $result['photos'] = $photos;
+                }
             }
             return $result;
     }
@@ -338,7 +364,7 @@ class TwitterAPIAccessorOAuth {
         //If it's a list of users, set the cursor
         if (isset($json->users)) {
             if (isset($json->next_cursor)) {
-                $this->next_cursor =  $json->next_cursor;
+                $this->next_cursor =  $json->next_cursor_str;
             }
             foreach ($json->users as $user) {
                 $parsed_payload[] = self::convertJSONtoUserArray($user);
@@ -363,7 +389,7 @@ class TwitterAPIAccessorOAuth {
         //If it's a list of IDs, set the cursor
         if (isset($json->ids)) {
             if (isset($json->next_cursor)) {
-                $this->next_cursor =  $json->next_cursor;
+                $this->next_cursor =  $json->next_cursor_str;
             }
             foreach ($json->ids as $id) {
                 $parsed_payload[] = array('id'=>$id);
@@ -389,6 +415,7 @@ class TwitterAPIAccessorOAuth {
                 'location'        => (string)$json_user->location,
                 'description'     => (string)$json_user->description,
                 'url'             => (string)$json_user->url,
+                'is_verified'     => (integer)self::boolToInt($json_user->verified),
                 'is_protected'    => (integer)self::boolToInt($json_user->protected),
                 'follower_count'  => (integer)$json_user->followers_count,
                 'friend_count'    => (integer)$json_user->friends_count,
@@ -424,7 +451,7 @@ class TwitterAPIAccessorOAuth {
         //If it's a list of lists, set the cursor
         if (isset($json->lists)) {
             if (isset($json->next_cursor)) {
-                $this->next_cursor =  $json->next_cursor;
+                $this->next_cursor =  $json->next_cursor_str;
             }
             foreach ($json->lists as $list) {
                 $parsed_payload[] = array(

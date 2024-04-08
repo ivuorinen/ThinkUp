@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/fixtures/class.FixtureBuilder.php
  *
- * Copyright (c) 2009-2013 Mark Wilkie
+ * Copyright (c) 2009-2016 Mark Wilkie
  *
  * LICENSE:
  *
@@ -60,7 +60,7 @@
  *   </code>
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Mark Wilkie
+ * @copyright 2009-2016 Mark Wilkie
  * @author Mark Wilkie <mwilkie[at]gmail[dot]com>
  */
 class FixtureBuilder {
@@ -221,7 +221,7 @@ class FixtureBuilder {
             } else {
                 if (preg_match('/^enum/', $column['Type'])) {
                     $column['value'] = $this->genEnum( $column['Type'] );
-                } else if (preg_match('/^decimal/', $column['Type'])) {
+                } else if (preg_match('/^(decimal|float)/', $column['Type'])) {
                     $column['value'] = $this->genDecimal($column['Type']);
                 } else if (preg_match('/^(int|tinyint)/', $column['Type'])) {
                     preg_match('#\((.*?)\)#', $column['Type'], $int_length);

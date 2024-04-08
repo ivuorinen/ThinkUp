@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/TestOfLoader.php
  *
- * Copyright (c) 2009-2013 Gina Trapani, Mark Wilkie
+ * Copyright (c) 2009-2016 Gina Trapani, Mark Wilkie
  *
  * LICENSE:
  *
@@ -23,7 +23,7 @@
  * Test of Loader class
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani, Mark Wilkie
+ * @copyright 2009-2016 Gina Trapani, Mark Wilkie
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  */
 require_once dirname(__FILE__).'/init.tests.php';
@@ -57,7 +57,7 @@ class TestOfLoader extends ThinkUpBasicUnitTestCase {
 
         // check special classes
         $this->assertEqual( Loader::getSpecialClasses(),
-        array('Smarty'=>THINKUP_WEBAPP_PATH . '_lib/extlib/Smarty-2.6.26/libs/Smarty.class.php'));
+        array('Smarty'=>THINKUP_WEBAPP_PATH . '_lib/extlib/Smarty-2.6.28/libs/Smarty.class.php'));
     }
 
     public function testLoaderRegisterWithStringAdditionalPath() {
@@ -180,14 +180,14 @@ class TestOfLoader extends ThinkUpBasicUnitTestCase {
         // $this->expectError();
         // $lookup_test = new ConsumerUserStream();
 
-        Loader::addSpecialClass('ConsumerUserStream', 'plugins/twitterrealtime/model/class.ConsumerUserStream.php');
+        Loader::addSpecialClass('OAuthConsumer', 'plugins/twitter/extlib/twitteroauth/OAuth.php');
         $special_classes = Loader::getSpecialClasses();
         $this->assertEqual( Loader::getSpecialClasses(),
         array(
-        'Smarty'=>THINKUP_WEBAPP_PATH . '_lib/extlib/Smarty-2.6.26/libs/Smarty.class.php',
-        'ConsumerUserStream'=>THINKUP_WEBAPP_PATH . 'plugins/twitterrealtime/model/class.ConsumerUserStream.php'
+        'Smarty'=>THINKUP_WEBAPP_PATH . '_lib/extlib/Smarty-2.6.28/libs/Smarty.class.php',
+        'OAuthConsumer'=>THINKUP_WEBAPP_PATH . 'plugins/twitter/extlib/twitteroauth/OAuth.php'
         ));
         //shouldn't throw a not found error
-        $lookup_test = new ConsumerUserStream('username', 'password');
+        $lookup_test = new OAuthConsumer('username', 'password');
     }
 }

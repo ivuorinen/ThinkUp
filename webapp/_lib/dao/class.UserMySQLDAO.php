@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/model/class.UserMySQLDAO.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -24,7 +24,7 @@
  * User Data Access Object MySQL Implementation
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  *
  */
@@ -98,9 +98,12 @@ class UserMySQLDAO extends PDODAO implements UserDAO {
             ':username'=>$user->username,
             ':full_name'=>$user->full_name,
             ':avatar'=>$user->avatar,
+        	':gender'=>$user->gender,
+        	':birthday'=>$user->birthday,
             ':location'=>$user->location,
             ':description'=>$user->description,
             ':url'=>$user->url,
+            ':is_verified'=>$this->convertBoolToDB($user->is_verified),
             ':is_protected'=>$this->convertBoolToDB($user->is_protected),
             ':follower_count'=>$user->follower_count,
             ':post_count'=>$user->post_count,
@@ -109,29 +112,49 @@ class UserMySQLDAO extends PDODAO implements UserDAO {
             ':network'=>$user->network
         );
 
-        $is_user_in_storage = false;
-        $is_user_in_storage = $this->isUserInDB($user->user_id, $user->network);
-        if (!$is_user_in_storage) {
-            $q = "INSERT INTO #prefix#users (user_id, user_name, full_name, avatar, location, description, url, ";
-            $q .= "is_protected, follower_count, post_count, ".($has_friend_count ? "friend_count, " : "")." ".
+        $user_in_storage = $this->getDetails($user->user_id, $user->network);
+        if (!isset($user_in_storage)) {
+            //Insert new user
+            $q = "INSERT INTO #prefix#users (user_id, user_name, full_name, avatar, gender, birthday,";
+            $q .= "location, description, url, is_verified, is_protected, follower_count, post_count, ".
+            ($has_friend_count ? "friend_count, " : "")." ".
             ($has_favorites_count ? "favorites_count, " : "")." ".
             ($has_last_post ? "last_post, " : "")." found_in, joined, network  ".
             ($has_last_post_id ? ", last_post_id" : "").") ";
-            $q .= "VALUES ( :user_id, :username, :full_name, :avatar, :location, :description, :url, :is_protected, ";
-            $q .= ":follower_count, :post_count, ".($has_friend_count ? ":friend_count, " : "")." ".
-            ($has_favorites_count ? ":favorites_count, " : "")." ".
-            ($has_last_post ? ":last_post, " : "")." :found_in, :joined, :network ".
-            ($has_last_post_id ? ", :last_post_id " : "")." )";
+            $q .= "VALUES ( :user_id, :username, :full_name, :avatar, :gender, :birthday, :location, :description, ";
+            $q .= ":url, :is_verified, :is_protected, :follower_count, :post_count, ".
+                ($has_friend_count ? ":friend_count, " : "")." ".
+                ($has_favorites_count ? ":favorites_count, " : "")." ".
+                ($has_last_post ? ":last_post, " : "")." :found_in, :joined, :network ".
+                ($has_last_post_id ? ", :last_post_id " : "")." )";
         } else {
+            //Update existing user
             $q = "UPDATE #prefix#users SET full_name = :full_name, avatar = :avatar,  location = :location, ";
-            $q .= "user_name = :username, description = :description, url = :url, is_protected = :is_protected, ";
-            $q .= "follower_count = :follower_count, post_count = :post_count,  ".
+            $q .= "user_name = :username, description = :description, url = :url, is_verified = :is_verified, ";
+            $q .= "gender=:gender, birthday=:birthday, ";
+            $q .= "is_protected = :is_protected, follower_count = :follower_count, post_count = :post_count,  ".
             ($has_friend_count ? "friend_count= :friend_count, " : "")." ".
             ($has_favorites_count ? "favorites_count= :favorites_count, " : "")." ".
             ($has_last_post ? "last_post= :last_post, " : "")." last_updated = NOW(), found_in = :found_in, ";
             $q .= "joined = :joined,  network = :network ".
             ($has_last_post_id ? ", last_post_id = :last_post_id" : "")." ";
             $q .= "WHERE user_id = :user_id AND network = :network;";
+
+            //Capture description version
+            //If stored description doesn't match the current one, store the new version
+            if (Utils::stripURLsOutOfText($user_in_storage->description)
+                != Utils::stripURLsOutOfText($user->description)) {
+                $user_versions_dao = DAOFactory::getDAO('UserVersionsDAO');
+                $user_versions_dao->addVersionOfField($user_in_storage->id, 'description', $user->description);
+            }
+            //Capture avatar version
+            //If stored avatar doesn't match the current one, store the new version
+            if ($user_in_storage->avatar != $user->avatar) {
+                if (!isset($user_versions_dao)) {
+                    $user_versions_dao = DAOFactory::getDAO('UserVersionsDAO');
+                }
+                $user_versions_dao->addVersionOfField($user_in_storage->id, 'avatar', $user->avatar);
+            }
         }
 
         if ($has_friend_count) {
@@ -149,6 +172,14 @@ class UserMySQLDAO extends PDODAO implements UserDAO {
         }
         if ($this->profiler_enabled) { Profiler::setDAOMethod(__METHOD__); }
         $ps = $this->execute($q, $vars);
+
+        //If a new user got inserted, add the base bio and avatar into user_versions
+        if (!isset($user_in_storage)) {
+            $new_user_id = $this->getInsertId($ps);
+            $user_versions_dao = DAOFactory::getDAO('UserVersionsDAO');
+            $user_versions_dao->addVersionOfField($new_user_id, 'description', $user->description);
+            $user_versions_dao->addVersionOfField($new_user_id, 'avatar', $user->avatar);
+        }
         $results = $this->getUpdateCount($ps);
         return $results;
     }
@@ -161,6 +192,16 @@ class UserMySQLDAO extends PDODAO implements UserDAO {
             ':user_id'=>(string)$user_id,
             ':network'=>$network
         );
+        if ($this->profiler_enabled) { Profiler::setDAOMethod(__METHOD__); }
+        $ps = $this->execute($q, $vars);
+        return $this->getDataRowAsObject($ps, "User");
+    }
+
+    public function getDetailsByUserKey($user_key) {
+        $q = "SELECT * , ".$this->getAverageTweetCount()." ";
+        $q .= "FROM #prefix#users u ";
+        $q .= "WHERE u.id = :user_key ";
+        $vars = array( ':user_key'=>(int)$user_key);
         if ($this->profiler_enabled) { Profiler::setDAOMethod(__METHOD__); }
         $ps = $this->execute($q, $vars);
         return $this->getDataRowAsObject($ps, "User");

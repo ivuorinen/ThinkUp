@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/plugins/facebook/controller/class.FacebookPluginConfigurationController.php
  *
- * Copyright (c) 2009-2013 Gina Trapani, Guillaume Boudreau, Mark Wilkie
+ * Copyright (c) 2009-2016 Gina Trapani, Guillaume Boudreau, Mark Wilkie
  *
  * LICENSE:
  *
@@ -23,25 +23,15 @@
  *
  * Facebook Plugin Configuration controller
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani, Guillaume Boudreau, Mark Wilkie
+ * @copyright 2009-2016 Gina Trapani, Guillaume Boudreau, Mark Wilkie
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  *
  */
 class FacebookPluginConfigurationController extends PluginConfigurationController {
-    /**
-     *
-     * @var Owner
-     */
-    var $owner;
-    /**
-     * Constructor
-     * @param Owner $owner
-     * @return FacebookPluginConfigurationController
-     */
+
     public function __construct($owner) {
         parent::__construct($owner, 'facebook');
         $this->disableCaching();
-        $this->owner = $owner;
     }
 
     public function authControl() {
@@ -90,7 +80,7 @@ class FacebookPluginConfigurationController extends PluginConfigurationControlle
      * @return bool
      */
     protected function isAccountPage($account_id, $access_token) {
-        $account = FacebookGraphAPIAccessor::apiRequest('/' . $account_id . '?metadata=true', $access_token);
+        $account = FacebookGraphAPIAccessor::apiRequest($account_id, $access_token, array('metadata'=>'true'));
         return !empty($account)
         && ((!empty($account->type)  && (strcmp($account->type, 'page')==0))
         || (!empty($account->metadata->type) && (strcmp($account->metadata->type, 'page')==0)));
@@ -100,137 +90,155 @@ class FacebookPluginConfigurationController extends PluginConfigurationControlle
      * @param array $options 'facebook_app_id' and 'facebook_api_secret'
      */
     protected function setUpFacebookInteractions($options) {
-        // Create our Facebook Application instance
-        $facebook = new Facebook(array(
-        'appId'  => $options['facebook_app_id']->option_value,
-        'secret' => $options['facebook_api_secret']->option_value
-        ));
+        $facebook_app_id = $options['facebook_app_id']->option_value;
 
-        $fb_user = $facebook->getUser();
-        if ($fb_user) {
-            try {
-                $fb_user_profile = $facebook->api('/me');
-            } catch (FacebookApiException $e) {
-                error_log($e);
-                $fb_user = null;
-                $fb_user_profile = null;
-            }
-        }
-        //Plant unique token for CSRF protection during auth per https://developers.facebook.com/docs/authentication/
+        // Plant unique token for CSRF protection during auth per https://developers.facebook.com/docs/authentication/
         if (SessionCache::get('facebook_auth_csrf') == null) {
             SessionCache::put('facebook_auth_csrf', md5(uniqid(rand(), true)));
         }
 
-        $params = array('scope'=>'read_stream,user_likes,user_location,user_website,'.
-        'read_friendlists,friends_location,manage_pages,read_insights',
-        'state'=>SessionCache::get('facebook_auth_csrf'));
+        if (isset($this->owner) && $this->owner->isMemberAtAnyLevel()) {
+            if ($this->owner->isMemberLevel()) {
+                $instance_dao = DAOFactory::getDAO('InstanceDAO');
+                $owner_instances = $instance_dao->getByOwnerAndNetwork($this->owner, 'facebook');
+                if (sizeof($owner_instances) > 0) {
+                    $this->do_show_add_button = false;
+                    $this->addInfoMessage("To connect another Facebook account to ThinkUp, upgrade your membership.",
+                    'membership_cap');
+                }
+            }
+        }
 
-        $fbconnect_link = $facebook->getLoginUrl($params);
-        $this->addToView('fbconnect_link', $fbconnect_link);
+        $scope = 'user_posts,email';
+        $state = SessionCache::get('facebook_auth_csrf');
+        $redirect_url = (Utils::getApplicationURL(). 'account/?p=facebook');
 
-        self::processPageActions($options, $facebook);
+        $fbconnect_link = FacebookGraphAPIAccessor::getLoginURL($facebook_app_id, $scope, $state, $redirect_url);
+
+        //For expired connections
+        $this->addToView('fb_reconnect_link', $fbconnect_link);
+
+        if ($this->do_show_add_button) {
+            $this->addToView('fbconnect_link', $fbconnect_link);
+        }
+
+        self::processPageActions($options);
 
         $logger = Logger::getInstance();
-        $user_pages = array();
-        $user_admin_pages = array();
         $instance_dao = DAOFactory::getDAO('InstanceDAO');
         $instances = $instance_dao->getByOwnerAndNetwork($this->owner, 'facebook');
 
         $owner_instance_dao = DAOFactory::getDAO('OwnerInstanceDAO');
         foreach ($instances as $instance) {
-            // TODO: figure out if the scope has changed since this instance last got its tokens,
-            // and we need to get re-request permission with the new scope
             $tokens = $owner_instance_dao->getOAuthTokens($instance->id);
             $access_token = $tokens['oauth_access_token'];
-            if ($instance->network == 'facebook') { //not a page
-                $pages = FacebookGraphAPIAccessor::apiRequest('/'.$instance->network_user_id.'/likes', $access_token);
-                if (@$pages->data) {
-                    $user_pages[$instance->network_user_id] = $pages->data;
-                }
-
-                $sub_accounts = FacebookGraphAPIAccessor::apiRequest('/'.$instance->network_user_id.'/accounts',
-                $access_token);
-                if (!empty($sub_accounts->data)) {
-                    $user_admin_pages[$instance->network_user_id] = array();
-                    foreach ($sub_accounts->data as $act) {
-                        if (self::isAccountPage($act->id, $access_token)) {
-                            $user_admin_pages[$instance->network_user_id][] = $act;
-                        }
-                    }
-                }
-            }
             if (isset($tokens['auth_error']) && $tokens['auth_error'] != '') {
                 $instance->auth_error = $tokens['auth_error'];
             }
-        }
-        $this->addToView('user_pages', $user_pages);
-        $this->addToView('user_admin_pages', $user_admin_pages);
-
-        $owner_instance_pages = $instance_dao->getByOwnerAndNetwork($this->owner, 'facebook page');
-        if (count($owner_instance_pages) > 0) {
-            $this->addToView('owner_instance_pages', $owner_instance_pages);
         }
         $this->addToView('instances', $instances);
     }
     /**
      * Process actions based on $_GET parameters. Authorize FB user or add FB page.
      * @param arr $options Facebook plugin options
-     * @param Facebook $facebook Facebook object
      */
-    protected function processPageActions($options, Facebook $facebook) {
+    protected function processPageActions($options) {
         //authorize user
         if (isset($_GET["code"]) && isset($_GET["state"])) {
             //validate state to avoid CSRF attacks
             if ($_GET["state"] == SessionCache::get('facebook_auth_csrf')) {
                 //Prepare API request
                 //First, prep redirect URI
-                $redirect_uri = urlencode(Utils::getApplicationURL(). 'account/?p=facebook');
+                $redirect_uri = Utils::getApplicationURL(). 'account/?p=facebook';
 
                 //Build API request URL
-                $api_req = 'https://graph.facebook.com/oauth/access_token?client_id='.
-                $options['facebook_app_id']->option_value.'&client_secret='.
-                $options['facebook_api_secret']->option_value. '&redirect_uri='.$redirect_uri.'&state='.
-                SessionCache::get('facebook_auth_csrf').'&code='.$_GET["code"];
+                $api_req = 'oauth/access_token';
+                $api_req_params = array(
+                    'client_id'=> $options['facebook_app_id']->option_value,
+                    'client_secret' => $options['facebook_api_secret']->option_value,
+                    'redirect_uri' => $redirect_uri,
+                    'state'=> SessionCache::get('facebook_auth_csrf'),
+                    'code'=>$_GET["code"]
+                );
 
-                $access_token_response = FacebookGraphAPIAccessor::rawApiRequest($api_req, false);
-                parse_str($access_token_response);
+                $access_token_response = FacebookGraphAPIAccessor::apiRequest($api_req, null, $api_req_params, null);
+                //DEBUG
+                // Logger::getInstance()->logInfo("Access token response: "
+                //     .Utils::varDumpToString($access_token_response), __METHOD__.','.__LINE__);
+
+                if (isset($access_token_response->error)) {
+                    $this->addErrorMessage("There was a problem. Facebook says: "
+                        .$access_token_response->error->message." Please try again.", 'user_add');
+                    $logger->logInfo("Added error message ",
+                        __METHOD__.','.__LINE__);
+                    return;
+                }
+
+                $access_token = $access_token_response->access_token;
+
                 if (isset($access_token)) {
-                    $facebook->setAccessToken($access_token);
-                    $fb_user_profile = $facebook->api('/me');
-                    $fb_username = $fb_user_profile['name'];
-                    $fb_user_id = $fb_user_profile['id'];
-                    $this->addSuccessMessage($this->saveAccessToken($fb_user_id, $access_token, $fb_username),
-                    'authorization');
+                    /**
+                     * Swap in short-term token for long-lived token as per
+                     * https://developers.facebook.com/docs/facebook-login/access-tokens/#extending
+                     */
+                    $api_req = 'oauth/access_token';
+                    $api_req_params = array(
+                        'grant_type'=>'fb_exchange_token',
+                        'client_id'=> $options['facebook_app_id']->option_value,
+                        'client_secret'=> $options['facebook_api_secret']->option_value,
+                        'fb_exchange_token'=>$access_token
+                    );
+
+                    $access_token_response = FacebookGraphAPIAccessor::apiRequest($api_req, null, $api_req_params);
+                    // DEBUG
+                    // Logger::getInstance()->logInfo("Exchanged access token response: "
+                    //     .Utils::varDumpToString($access_token_response), __METHOD__.','.__LINE__);
+
+                    $access_token = $access_token_response->access_token;
+
+                    $fb_user_profile = FacebookGraphAPIAccessor::apiRequest('me', $access_token, 'name,id');
+                    //DEBUG
+                    // Logger::getInstance()->logInfo("FB user profile: ".Utils::varDumpToString($fb_user_profile),
+                    //     __METHOD__.','.__LINE__);
+
+                    if (isset($fb_user_profile->error)) {
+                        $error_msg = "Problem authorizing your Facebook account!";
+                        $error_object = $access_token_response;
+                        if (isset($error_object) && isset($error_object->error->type)
+                            && isset($error_object->error->message)) {
+                            $error_msg = $error_msg."<br>Facebook says: \"".$error_object->error->type.": "
+                            .$error_object->error->message. "\"";
+                        } else {
+                            $error_msg = $error_msg."<br>Facebook's response: \"".$access_token_response. "\"";
+                        }
+                        $this->addErrorMessage($error_msg, 'user_add', true);
+                    } else {
+                        $fb_username = isset($fb_user_profile->name)?$fb_user_profile->name:'';
+                        $fb_user_id = isset($fb_user_profile->id)?$fb_user_profile->id:'';
+
+                        if (empty($fb_username)) {
+                            $error = 'Sorry, ThinkUp does not support business accounts.';
+                            $this->addErrorMessage($error, 'user_add');
+                        } else {
+                            $this->saveAccessToken($fb_user_id, $access_token, $fb_username);
+                        }
+                    }
                 } else {
                     $error_msg = "Problem authorizing your Facebook account! Please correct your plugin settings.";
-                    $error_object = json_decode($access_token_response);
+                    $error_object = $access_token_response;
                     if (isset($error_object) && isset($error_object->error->type)
-                    && isset($error_object->error->message)) {
+                        && isset($error_object->error->message)) {
                         $error_msg = $error_msg."<br>Facebook says: \"".$error_object->error->type.": "
                         .$error_object->error->message. "\"";
                     } else {
                         $error_msg = $error_msg."<br>Facebook's response: \"".$access_token_response. "\"";
                     }
-                    $this->addErrorMessage($error_msg, 'authorization', true);
+                    $this->addErrorMessage($error_msg, 'user_add', true);
                 }
             } else {
                 $this->addErrorMessage("Could not authenticate Facebook account due to invalid CSRF token.",
-                'authorization');
+                    'user_add');
             }
-        }
-
-        //insert pages
-        if (isset($_GET["action"]) && $_GET["action"] == "add page" && isset($_GET["facebook_page_id"])
-        && isset($_GET["viewer_id"]) && isset($_GET["owner_id"]) && isset($_GET["instance_id"])) {
-            //get access token
-            $oid = DAOFactory::getDAO('OwnerInstanceDAO');
-            $tokens = $oid->getOAuthTokens($_GET["instance_id"]);
-            $access_token = $tokens['oauth_access_token'];
-
-            $page_data = FacebookGraphAPIAccessor::apiRequest('/'.$_GET["facebook_page_id"], $access_token,
-            "id,name,picture");
-            self::insertPage($page_data->id, $_GET["viewer_id"], $_GET["instance_id"], $page_data->name,
-            $page_data->picture->data->url);
         }
     }
     /**
@@ -258,7 +266,7 @@ class FacebookPluginConfigurationController extends PluginConfigurationControlle
                 "different account, log  out of Facebook in a different browser tab and try again.", 'user_add');
             }
             //set auth error to empty string
-            $owner_instance_dao->setAuthError($this->owner->id, $instance->id);
+            $owner_instance_dao->setAuthErrorByTokens($instance->id, $fb_access_token, '');
         } else { //Instance does not exist
             $instance_dao->insert($fb_user_id, $fb_username, 'facebook');
             $instance = $instance_dao->getByUserIdOnNetwork($fb_user_id, 'facebook');
@@ -268,7 +276,7 @@ class FacebookPluginConfigurationController extends PluginConfigurationControlle
 
         if (!$user_dao->isUserInDB($fb_user_id, 'facebook')) {
             $r = array('user_id'=>$fb_user_id, 'user_name'=>$fb_username,'full_name'=>$fb_username, 'avatar'=>'',
-            'location'=>'', 'description'=>'', 'url'=>'', 'is_protected'=>'',  'follower_count'=>0,
+            'location'=>'', 'description'=>'', 'url'=>'', 'is_verified'=>'', 'is_protected'=>'',  'follower_count'=>0,
             'friend_count'=>0, 'post_count'=>0, 'last_updated'=>'', 'last_post'=>'', 'joined'=>'',
             'last_post_id'=>'', 'network'=>'facebook' );
             $u = new User($r, 'Owner info');
@@ -314,6 +322,7 @@ class FacebookPluginConfigurationController extends PluginConfigurationControlle
                 $val['location'] = '';
                 $val['description'] = '';
                 $val['url'] = '';
+                $val['is_verified'] = false;
                 $val['is_protected'] = false;
                 $val['follower_count'] = 0;
                 $val['post_count'] = 0;

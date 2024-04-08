@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/TestOfInstanceMySQLDAO.php
  *
- * Copyright (c) 2009-2013 Gina Trapani, Guillaume Boudreau, Christoffer Viken, Mark Wilkie
+ * Copyright (c) 2009-2016 Gina Trapani, Guillaume Boudreau, Christoffer Viken, Mark Wilkie
  *
  * LICENSE:
  *
@@ -26,7 +26,7 @@
  * @author Christoffer Viken <christoffer[at]viken[dot]me>
  * @author Mark Wilkie <mark[at]bitterpill[dot]org>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani, Guillaume Boudreau, Christoffer Viken, Mark Wilkie
+ * @copyright 2009-2016 Gina Trapani, Guillaume Boudreau, Christoffer Viken, Mark Wilkie
  */
 require_once dirname(__FILE__).'/init.tests.php';
 require_once THINKUP_WEBAPP_PATH.'_lib/extlib/simpletest/autorun.php';
@@ -365,6 +365,37 @@ class TestOfInstanceMySQLDAO extends ThinkUpUnitTestCase {
             $this->assertEqual(count($result), 0);
     }
 
+    public function testGetByOwnerWithStatus(){
+        $data = array(
+            'id'=>2,
+            'user_name'=>'steven',
+            'full_name'=>'Steven Warren',
+            'email'=>'me@example.com',
+            'last_login'=>'Yesterday',
+            'is_admin'=>1,
+            'is_activated'=>1,
+            'failed_logins'=>0,
+            'account_status'=>''
+            );
+        $owner = new Owner($data);
+
+        $result = $this->DAO->getByOwnerWithStatus($owner);
+        $this->assertIsA($result, "array");
+        $this->assertEqual(count($result), 2);
+        $users = array('jack','jill');
+        $user_ids = array(10, 12);
+        foreach($result as $id=>$i){
+            $this->assertIsA($i, "Instance");
+            $this->assertEqual($i->network_username, $users[$id]);
+            $this->assertEqual($i->network_user_id, $user_ids[$id]);
+            if ($i->network_user_id == 10) {
+                $this->assertEqual($i->auth_error, 'There has been an error.');
+            } else {
+                $this->assertEqual($i->auth_error, '');
+            }
+        }
+    }
+
     public function testGetByOwnerAndNetwork(){
         $data = array(
         'id'=>2,
@@ -575,8 +606,6 @@ class TestOfInstanceMySQLDAO extends ThinkUpUnitTestCase {
 
         //Edit it.
         $i->last_post_id = 512;
-        $i->last_page_fetched_replies = 2;
-        $i->last_page_fetched_tweets = 17;
         $i->is_archive_loaded_follows = 1;
         $i->is_archive_loaded_replies = 1;
 
@@ -795,4 +824,16 @@ class TestOfInstanceMySQLDAO extends ThinkUpUnitTestCase {
         $this->assertEqual($result[1]->id, 6);
         $this->assertEqual($result[1]->network_username, "yaya");
     }
+
+    public function testSetPostArchiveLoaded() {
+        $builders[] = FixtureBuilder::build('instances', array('network_user_id'=>17,
+        'network_username'=>'johndoe', 'network'=>'twitter', 'network_viewer_id'=>15,
+        'crawler_last_run'=>'2010-01-01 12:00:01', 'is_active'=>1, 'is_archive_loaded_posts'=>0));
+
+        $this->DAO->setPostArchiveLoaded(17, 'twitter');
+        $result = $this->DAO->getByUsername('johndoe');
+
+        $this->assertTrue($result->is_archive_loaded_posts);
+    }
+
 }

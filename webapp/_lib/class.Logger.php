@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/class.Logger.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -25,7 +25,7 @@
  *
  * Crawler logger outputs information about crawler to terminal or to file, depending on configuration.
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  *
  */
@@ -203,13 +203,13 @@ class Logger {
                 $message_wrapper .= '</td> <td class="';
                 switch ($type) {
                     case self::ERROR:
-                        $message_wrapper .= 'control-group error">';
+                        $message_wrapper .= 'form-group error">';
                         break;
                     case self::SUCCESS:
-                        $message_wrapper .= 'control-group success">';
+                        $message_wrapper .= 'form-group success">';
                         break;
                     default:
-                        $message_wrapper .= 'control-group warning">';
+                        $message_wrapper .= 'form-group warning">';
                 }
                 if (strlen($status_message) > 0) {
                     $this->output($message_wrapper.$status_message.'</td></tr>'); // Write status to log

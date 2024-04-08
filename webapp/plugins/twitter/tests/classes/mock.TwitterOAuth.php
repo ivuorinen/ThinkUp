@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/plugins/twitter/tests/classes/mock.TwitterOAuth.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -23,12 +23,12 @@
  * Mock Twitter OAuth class for tests
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  */
 class TwitterOAuth {
 
-    var $data_path = 'webapp/plugins/twitter/tests/testdata/';
+    var $data_path = 'webapp/plugins/twitter/tests/data/';
 
     private $last_status_code = 200;
 
@@ -96,7 +96,7 @@ class TwitterOAuth {
     }
 
     public function http($url) {
-        $FAUX_DATA_PATH = THINKUP_WEBAPP_PATH.'plugins/twitter/tests/testdata/';
+        $FAUX_DATA_PATH = THINKUP_WEBAPP_PATH.'plugins/twitter/tests/data/';
         $url = str_replace('https://twitter.com/', '', $url);
         $url = str_replace('https://api.twitter.com/1.1/', '', $url);
         $url = str_replace('http://search.twitter.com/', '', $url);

@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/TestOfTestAdminController.php
  *
- * Copyright (c) 2009-2013 Gina Trapani, Mark Wilkie
+ * Copyright (c) 2009-2016 Gina Trapani, Mark Wilkie
  *
  * LICENSE:
  *
@@ -25,7 +25,7 @@
  * TestController isn't a real ThinkUp controller, this is just a template for all Controller tests.
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani, Mark Wilkie
+ * @copyright 2009-2016 Gina Trapani, Mark Wilkie
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  *
  */
@@ -62,10 +62,7 @@ class TestOfTestAdminController extends ThinkUpUnitTestCase {
         $config = Config::getInstance();
         $controller = new TestAdminController(true);
         $results = $controller->go();
-        $v_mgr = $controller->getViewManager();
-        $config = Config::getInstance();
-        $this->assertEqual('You must <a href="'.$config->getValue('site_root_path').
-        'session/login.php">log in</a> to do this.', $v_mgr->getTemplateDataItem('error_msg'));
+        $this->assertPattern( '/session\/login.php\?redirect\=/', $controller->redirect_destination);
     }
 
     public function testLoggedInAsAdmin() {

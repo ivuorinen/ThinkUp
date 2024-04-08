@@ -5,11 +5,9 @@ The official ThinkUp distribution comes with a set of approved plugins. Click on
 
 .. toctree::
    :maxdepth: 1
-   
+
    expandurls
    facebook
-   foursquare
-   geoencoder
-   googleplus
+   insightsgenerator
+   instagram
    twitter/index
-   twitterrealtime

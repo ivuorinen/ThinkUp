@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/controller/class.ForgotPasswordController.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -25,17 +25,18 @@
  * Handles requests for ThinkUp user password reset links.
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  * @author Michael Louis Thaler <michael.louis.thaler[at]gmail[dot]com>
  */
 
 class ForgotPasswordController extends ThinkUpController {
 
     public function control() {
+        $this->redirectToThinkUpLLCEndpoint('forgot.php');
         $config = Config::getInstance();
         $this->addToView('is_registration_open', $config->getValue('is_registration_open'));
 
-        if (isset($_POST['Submit']) && $_POST['Submit'] == 'Send Reset') {
+        if (isset($_POST['Submit']) && $_POST['Submit'] == 'Send') {
             $this->disableCaching();
 
             $dao = DAOFactory::getDAO('OwnerDAO');

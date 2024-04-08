@@ -6,7 +6,7 @@ ThinkUp's Facebook plugin collects posts and status updates for Facebook user pr
 Set Up the Facebook Plugin (Admin only)
 ---------------------------------------
 
-To use the Facebook plugin, you'l need to `create a Facebook application on facebook.com 
+To use the Facebook plugin, you'll need to `create a Facebook application on facebook.com 
 <https://developers.facebook.com/apps>`_. Set the Web Site > Site URL  as recommended, and the Facebook-provided API
 Key, Application Secret and Application ID in the Facebook plugin's settings page in ThinkUp.
 
@@ -38,6 +38,12 @@ ThinkUp's Facebook plugin works with Facebook pages, but it can only connect wit
 To add a Facebook page, connect a regular Facebook user account to ThinkUp. Then, either create a new page or "like" an
 existing page on Facebook.com.  Add it to ThinkUp from the pages dropdown in ThinkUp, which contains both pages you 
 manage and pages you "like."  Any pages you manage will be listed first.
+
+Note about business accounts
+----------------------------
+
+ThinkUp's Facebook plugin does not support business accounts. When you try to connect your Facebook business account
+to ThinkUp, you will see the error message "Sorry, ThinkUp does not support business accounts."
 
 Help! I don't see Facebook pages I manage in the dropdown list
 --------------------------------------------------------------

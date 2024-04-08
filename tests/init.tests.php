@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/init.tests.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -22,7 +22,7 @@
  *
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  */
 putenv("MODE=TESTS");
 require_once 'config.tests.inc.php';
@@ -34,10 +34,6 @@ if ( !defined('THINKUP_ROOT_PATH') ) {
 
 if ( !defined('THINKUP_WEBAPP_PATH') ) {
     define('THINKUP_WEBAPP_PATH', THINKUP_ROOT_PATH . 'webapp/');
-}
-
-if ( !defined('TESTS_RUNNING') ) {
-    define('TESTS_RUNNING', true);
 }
 
 //Register our lazy class loader
@@ -56,5 +52,7 @@ THINKUP_WEBAPP_PATH . 'plugins/geoencoder/tests/',
 THINKUP_WEBAPP_PATH . 'plugins/hellothinkup/tests/',
 THINKUP_WEBAPP_PATH . 'plugins/googleplus/tests/',
 THINKUP_WEBAPP_PATH . 'plugins/foursquare/tests/',
-THINKUP_WEBAPP_PATH . 'plugins/insightsgenerator/tests/'
+THINKUP_WEBAPP_PATH . 'plugins/insightsgenerator/tests/',
+THINKUP_WEBAPP_PATH . 'plugins/youtube/tests/',
+THINKUP_WEBAPP_PATH . 'plugins/instagram/tests/'
 ));

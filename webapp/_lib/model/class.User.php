@@ -5,7 +5,7 @@
  *
  * ThinkUp/webapp/_lib/model/class.User.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -29,7 +29,7 @@
  * It does not represent not ThinkUp users, see the Owner class for ThinkUp users.
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  *
  */
@@ -56,6 +56,16 @@ class User {
     var $avatar;
     /**
      *
+     * @var str
+     */
+    var $gender;
+    /**
+     *
+     * @var str
+     */
+    var $birthday;
+    /**
+     *
      * @var location
      */
     var $location;
@@ -69,6 +79,11 @@ class User {
      * @var url
      */
     var $url;
+    /**
+     *
+     * @var bool
+     */
+    var $is_verified;
     /**
      *
      * @var bool
@@ -114,7 +129,7 @@ class User {
      *
      * @var date
      */
-    var $joined;
+    var $joined = null;
     /**
      *
      * @var int
@@ -151,9 +166,23 @@ class User {
             $this->full_name = $val['full_name'];
             $this->user_id = $val['user_id'];
             $this->avatar = $val['avatar'];
+            if (isset($val['gender'])) {
+            	$this->gender = $val['gender'];
+            }
+            if (isset($val['birthday'])) {
+            	$this->birthday = $val['birthday'];
+            }
             $this->location = $val['location'];
             $this->description = $val['description'];
             $this->url = $val['url'];
+            if (isset($val['is_verified'])) {
+                $this->is_verified = $val['is_verified'];
+            }
+            if ($this->is_verified == '') {
+                $this->is_verified = 0;
+            } elseif ($this->is_verified == 'true') {
+                $this->is_verified = 1;
+            }
             $this->is_protected = $val['is_protected'];
             if ($this->is_protected == '') {
                 $this->is_protected = 0;

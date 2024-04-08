@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/controller/class.ThinkUpController.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -26,7 +26,7 @@
  * The parent class of all ThinkUp webapp controllers.
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  */
 
@@ -93,16 +93,25 @@ abstract class ThinkUpController {
      *  @return ThinkUpController
      */
     public function __construct($session_started=false) {
-        if (!$session_started) {
-            session_start();
-        }
         try {
             $config = Config::getInstance();
             $this->profiler_enabled = Profiler::isEnabled();
             if ( $this->profiler_enabled) {
                 $this->start_time = microtime(true);
             }
+            if ($config->getValue('timezone')) {
+                date_default_timezone_set($config->getValue('timezone'));
+            }
+            if (!$session_started) {
+                SessionCache::init();
+            }
             $this->view_mgr = new ViewManager();
+            if (SessionCache::isKeySet('selected_instance_network') &&
+            SessionCache::isKeySet('selected_instance_username')) {
+                $this->addToView('selected_instance_network', SessionCache::get('selected_instance_network'));
+                $this->addToView('selected_instance_username', SessionCache::get('selected_instance_username'));
+            }
+
             if ($this->isLoggedIn()) {
                 $this->addToView('logged_in_user', $this->getLoggedInUser());
             }
@@ -111,6 +120,11 @@ abstract class ThinkUpController {
             }
             $THINKUP_VERSION = $config->getValue('THINKUP_VERSION');
             $this->addToView('thinkup_version', $THINKUP_VERSION);
+
+            if (Utils::isThinkUpLLC()) {
+                $thinkupllc_endpoint = $config->getValue('thinkupllc_endpoint');
+                $this->addToView('thinkupllc_endpoint', $thinkupllc_endpoint);
+            }
 
             if (SessionCache::isKeySet('selected_instance_network') &&
             SessionCache::isKeySet('selected_instance_username')) {
@@ -128,6 +142,15 @@ abstract class ThinkUpController {
             'app_title_prefix'=>"",
             'cache_pages'=>false);
             $this->view_mgr = new ViewManager($cfg_array);
+
+            $this->setErrorTemplateState();
+            $this->addToView('error_type', get_class($e));
+            $disable_xss = false;
+            // if we are an installer exception, don't filter XSS, we have markup, and we trust this content
+            if (get_class($e) == 'InstallerException') {
+                $disable_xss = true;
+            }
+            $this->addErrorMessage($e->getMessage(), null, $disable_xss);
         }
     }
 
@@ -488,9 +511,6 @@ abstract class ThinkUpController {
         if ($classname != "InstallerController") {
             //Initialize config
             $config = Config::getInstance();
-            if ($config->getValue('timezone')) {
-                date_default_timezone_set($config->getValue('timezone'));
-            }
             if ($config->getValue('debug')) {
                 ini_set("display_errors", 1);
                 ini_set("error_reporting", E_STRICT);
@@ -624,6 +644,22 @@ abstract class ThinkUpController {
             return true;
         } else {
             throw new InvalidCSRFTokenException($token);
+        }
+    }
+
+    /**
+     * Redirect this controller to a ThinkUp LLC-hosted URL.
+     * @param  str $page Optional filename at endpoint
+     * @return void
+     */
+    public function redirectToThinkUpLLCEndpoint($page=null, $redirect=null) {
+        $config = Config::getInstance();
+        $thinkupllc_endpoint = $config->getValue('thinkupllc_endpoint');
+        if (isset($thinkupllc_endpoint)) {
+            $this->redirect($thinkupllc_endpoint.(isset($page)?$page:'').((isset($redirect))?'?redirect='.$redirect:''));
+            return true;
+        } else {
+            return false;
         }
     }
 }

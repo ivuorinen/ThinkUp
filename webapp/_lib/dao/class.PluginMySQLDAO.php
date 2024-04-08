@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/model/class.PluginMySQLDAO.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -24,7 +24,7 @@
  * Plugin Data Access Object
  * The data access object for retrieving and saving plugin data for thinkup
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  * @author Mark Wilkie <mwilkie[at]gmail[dot]com>
  */
@@ -170,7 +170,9 @@ class PluginMySQLDAO extends PDODAO implements PluginDAO {
                 $plugin_vals = $this->parseFileContents($contents, $pf);
                 if (isset($plugin_vals['class'])) {
                     require_once THINKUP_WEBAPP_PATH.'plugins/'.$pf."/model/class.".$plugin_vals['class'].".php";
-                    $installed_plugin = new $plugin_vals['class']($plugin_vals);
+                    if(class_exists($plugin_vals['class'])) {
+                        $installed_plugin = new $plugin_vals['class']($plugin_vals);
+                    }
                 } else {
                     $installed_plugin = new Plugin($plugin_vals);
                 }

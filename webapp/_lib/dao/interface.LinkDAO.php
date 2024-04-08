@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/model/interface.LinkDAO.php
  *
- * Copyright (c) 2009-2013 Gina Trapani, Christoffer Viken
+ * Copyright (c) 2009-2016 Gina Trapani, Christoffer Viken
  *
  * LICENSE:
  *
@@ -23,7 +23,7 @@
  * Link Data Access Object Interface
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani, Christoffer Viken
+ * @copyright 2009-2016 Gina Trapani, Christoffer Viken
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  * @author Christoffer Viken <christoffer[at]viken[dot]me>
  */
@@ -51,12 +51,6 @@ interface LinkDAO {
      */
     public function saveExpansionError($url, $error_text);
     /**
-     * Updates a URL in storage.
-     * @param Link $link
-     * @return int Update count
-     */
-    public function update(Link $link);
-    /**
      * Update a Link's title in the data store.
      * @param int $id
      * @param str $title
@@ -73,6 +67,14 @@ interface LinkDAO {
      * @return array with Link objects
      */
     public function getLinksByFriends($user_id, $network, $count = 15, $page = 1, $is_public = false);
+    /**
+     * Get the number of links posted by a user.
+     * @param int $user_id
+     * @param str $network
+     * @param int $days_ago
+     * @return int links count
+     */
+    public function countLinksPostedByUserSinceDaysAgo($user_id, $network, $days_ago = 7);
     /**
      * Get the links in a user's favorites.
      * @param int $user_id
@@ -100,6 +102,13 @@ interface LinkDAO {
      * @return array of Link objects
      */
     public function getLinksToExpand($limit = 1500);
+    /**
+     * Gets a number of links posted by active service users (instances) that have not been expanded.
+     * Non standard output - Scheduled for deprecation.
+     * @param int $limit
+     * @return array of Link objects
+     */
+    public function getLinksToExpandForInstances($limit = 1500);
     /**
      * Gets all links with short URL starting with a prefix.
      * Non standard output - Scheduled for deprecation.
@@ -133,4 +142,13 @@ interface LinkDAO {
      * @return int Total number of affected rows
      */
     public function deleteLinksByHashtagId($hashtag_id);
+    /**
+     * Get links by user given a user_id.
+     * @param int $user_id
+     * @param str name of network
+     * @param int max number of results returned.
+     * @param int number of days of results needed.
+     * @return array Links posted or shared by the user in the last X days, most recent first
+     */
+    public function getLinksByUserSinceDaysAgo($user_id, $network, $limit= 0, $days_ago = 0);
 }

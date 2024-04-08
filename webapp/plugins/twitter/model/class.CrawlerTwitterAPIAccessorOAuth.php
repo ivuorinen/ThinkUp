@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/plugins/twitter/model/class.CrawlerTwitterAPIAccessorOAuth.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -24,7 +24,7 @@
  * Crawler TwitterAPI Accessor, via OAuth
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  */
 class CrawlerTwitterAPIAccessorOAuth extends TwitterAPIAccessorOAuth {
@@ -77,9 +77,11 @@ class CrawlerTwitterAPIAccessorOAuth extends TwitterAPIAccessorOAuth {
             }
         }
         foreach ($this->endpoints as $endpoint) {
-            $endpoint->setRemaining($limits[$endpoint->getShortPath()]['remaining']);
-            $endpoint->setLimit($limits[$endpoint->getShortPath()]['limit']);
-            $endpoint->setReset($limits[$endpoint->getShortPath()]['reset']);
+            if(isset($limits[$endpoint->getShortPath()])) {
+                $endpoint->setRemaining($limits[$endpoint->getShortPath()]['remaining']);
+                $endpoint->setLimit($limits[$endpoint->getShortPath()]['limit']);
+                $endpoint->setReset($limits[$endpoint->getShortPath()]['reset']);
+            }
         }
     }
     /**

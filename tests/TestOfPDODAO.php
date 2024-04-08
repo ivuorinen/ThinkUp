@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/TestOfPDODAO.php
  *
- * Copyright (c) 2009-2013 Gina Trapani, Mark Wilkie, Christoffer Viken, Guillaume Boudreau
+ * Copyright (c) 2009-2016 Gina Trapani, Mark Wilkie, Christoffer Viken, Guillaume Boudreau
  *
  * LICENSE:
  *
@@ -26,7 +26,7 @@
  * @author Christoffer Viken <christoffer[at]viken[dot]me>
  * @author Guillaume Boudreau <gboudreau[at]pommepause[dot]com>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani, Mark Wilkie, Christoffer Viken, Guillaume Boudreau
+ * @copyright 2009-2016 Gina Trapani, Mark Wilkie, Christoffer Viken, Guillaume Boudreau
  */
 require_once dirname(__FILE__).'/init.tests.php';
 require_once THINKUP_WEBAPP_PATH.'_lib/extlib/simpletest/autorun.php';
@@ -117,6 +117,7 @@ class TestOfPDODAO extends ThinkUpUnitTestCase {
         $testdao = DAOFactory::getDAO('TestDAO');
         try {
             $testdao->badSql();
+            $this->fail("Exception should have been thrown and caught");
         } catch(PDOException $e) {
             $this->assertPattern('/Syntax error/', $e->getMessage());
         }
@@ -126,6 +127,38 @@ class TestOfPDODAO extends ThinkUpUnitTestCase {
         $testdao = DAOFactory::getDAO('TestDAO');
         try {
             $testdao->badSql();
+            $this->fail("Exception should have been thrown and caught");
+        } catch(PDOException $e) {
+            $this->assertPattern(
+            '/Database error!  To see the technical details of what went wrong, set debug = true/', $e->getMessage());
+        }
+
+        $config->setValue('debug', $orig_debug_setting);
+    }
+
+    public function testTooLongContent() {
+        $this->buildData();
+        PDODAO::$PDO->exec('SET SESSION sql_mode = "STRICT_ALL_TABLES";');
+
+        $config = Config::getInstance();
+        $orig_debug_setting = $config->getValue('debug');
+
+        //with debug true
+        $config->setValue('debug', true);
+        $testdao = DAOFactory::getDAO('TestDAO');
+        try {
+            $testdao->insertTooLongContent();
+            $this->fail("DataExceedsColumnWidthException should have been thrown and caught");
+        } catch(DataExceedsColumnWidthException $e) {
+            $this->assertPattern('/Data too long for column/', $e->getMessage());
+        }
+
+        //with debug false
+        $config->setValue('debug', false);
+        $testdao = DAOFactory::getDAO('TestDAO');
+        try {
+            $testdao->badSql();
+            $this->fail("DataExceedsColumnWidthException should have been thrown and caught");
         } catch(PDOException $e) {
             $this->assertPattern(
             '/Database error!  To see the technical details of what went wrong, set debug = true/', $e->getMessage());
@@ -138,6 +171,7 @@ class TestOfPDODAO extends ThinkUpUnitTestCase {
         $testdao = DAOFactory::getDAO('TestDAO');
         try {
             $testdao->badBinds();
+            $this->fail("Exception should have been thrown and caught");
         } catch(PDOException $e) {
             $this->assertPattern('/Invalid parameter number/', $e->getMessage(),
             'should get an Invalid parameter number error message');

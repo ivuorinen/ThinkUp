@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/model/class.Post.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -24,7 +24,7 @@
  * Post
  * A post, tweet, or status update on a ThinkUp source network or service (like Twitter or Facebook)
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  */
 class Post {
@@ -169,6 +169,10 @@ class Post {
      */
     var $favorited;
     /**
+     * @var str Non-persistent, When was this post favorited (only set in the context of fetching favorite posts)
+     */
+    var $favorited_timestamp;
+    /**
      * @var int Non-persistent, used for UI
      */
     var $all_retweets;
@@ -176,6 +180,10 @@ class Post {
      * @var int Non-persistent, used for UI, indicates whether Twitter RT count threshold was reached.
      */
     var $rt_threshold;
+    /**
+     * @var Str Link to this post on the respective service.
+     */
+    var $permalink;
     /**
      * Constructor
      * @param array $val Array of key/value pairs
@@ -221,6 +229,10 @@ class Post {
         if (isset($val["favorited"])) {
             $this->favorited = $val["favorited"];
         }
+        // favorited_timestamp is non-persistent.  Will be set when joined to favorites table
+        if (isset($val["favorited_timestamp"])) {
+            $this->favorited_timestamp = $val["favorited_timestamp"];
+        }
 
         // For the retweet count display, we will use the larger of retweet_count_cache and retweet_count_api,
         // and add it to old_retweet_count_cache.
@@ -239,6 +251,7 @@ class Post {
 
         // non-persistent, used for UI information display
         $this->all_retweets = $val['old_retweet_count_cache'] + $largest_native_RT_count;
+        $this->permalink = $val['permalink'];
     }
 
     /**

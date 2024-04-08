@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/TestOfTableStatsMySQLDAO.php
  *
- * Copyright (c) 2009-2013 Mark Wilkie
+ * Copyright (c) 2009-2016 Mark Wilkie
  *
  * LICENSE:
  *
@@ -23,7 +23,7 @@
  *
  * @author Mark Wilkie <mark[at]bitterpill[dot]org>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Mark Wilkie
+ * @copyright 2009-2016 Mark Wilkie
  */
 require_once dirname(__FILE__).'/init.tests.php';
 require_once THINKUP_WEBAPP_PATH.'_lib/extlib/simpletest/autorun.php';
@@ -56,14 +56,14 @@ class TestOfTableStatsMySQLDAO extends ThinkUpUnitTestCase {
             if ($table['table'] == $this->table_prefix . 'options') {
                 $this->assertEqual($table['count'], 1);
             } else if ($table['table'] == $this->table_prefix . 'plugins') {
-                $this->assertEqual($table['count'], 6);
+                $this->assertEqual($table['count'], 5);
             } else {
                 $this->assertEqual($table['count'], 0);
             }
         }
 
         // are we sorted by count desc?
-        $this->assertEqual(6,$counts[0]['count']);
+        $this->assertEqual(5,$counts[0]['count']);
         $this->assertEqual(1,$counts[1]['count']);
         $this->assertEqual(0,$counts[2]['count']);
     }

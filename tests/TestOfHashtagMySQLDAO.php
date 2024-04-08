@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/TestOfHashtagMySQLDAO.php
  *
- * Copyright (c) 2011-2013 Amy Unruh
+ * Copyright (c) 2011-2016 Amy Unruh
  *
  * LICENSE:
  *
@@ -21,7 +21,7 @@
  * <http://www.gnu.org/licenses/>.
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2011-2013  Amy Unruh
+ * @copyright 2011-2016  Amy Unruh
  * @author Amy Unruh
  */
 require_once dirname(__FILE__).'/init.tests.php';
@@ -84,16 +84,14 @@ class TestOfHashtagMySQLDAO extends ThinkUpUnitTestCase {
                         'instance_id' => 1,
                         'hashtag_id' => 1,
                         'last_post_id'  => '0',
-                        'earliest_post_id' => '0',
-                        'last_page_fetched_tweets' => 1));
+                        'earliest_post_id' => '0'));
 
         $builders[] = FixtureBuilder::build('instances_hashtags',
         array(
                         'instance_id' => 1,
                         'hashtag_id' => 2,
                         'last_post_id'  => '0',
-                        'earliest_post_id' => '0',
-                        'last_page_fetched_tweets' => 1));
+                        'earliest_post_id' => '0'));
 
         $builders[] = FixtureBuilder::build('hashtags',
         array('hashtag' => '#hashtag111', 'network'=>'twitter', 'count_cache' => 4));

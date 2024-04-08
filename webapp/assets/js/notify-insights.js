@@ -1,26 +1,26 @@
 /**
- * 
+ *
  * ThinkUp/webapp/assets/js/notify-insights.js
- * 
+ *
  * Copyright (c) 2013 Nilaksh Das
- * 
+ *
  * LICENSE:
- * 
+ *
  * This file is part of ThinkUp (http://thinkup.com).
- * 
+ *
  * ThinkUp is free software: you can redistribute it and/or modify it under the
  * terms of the GNU General Public License as published by the Free Software
  * Foundation, either version 2 of the License, or (at your option) any later
  * version.
- * 
+ *
  * ThinkUp is distributed in the hope that it will be useful, but WITHOUT ANY
  * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
  * A PARTICULAR PURPOSE. See the GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along with
  * ThinkUp. If not, see <http://www.gnu.org/licenses/>.
- * 
- * 
+ *
+ *
  * @author Nilaksh Das <nilakshdas[at]gmail[dot]com>
  * @license http://www.gnu.org/licenses/gpl.html
  * @copyright 2013 Nilaksh Das
@@ -43,17 +43,29 @@
                         dataType: "json",
                         success: function(data) {
                             if (typeof data.error === 'undefined') {
-                                for (var i = 0 ; i < data.length; i++) {
-                                    var insight = data[i];
+                                if (data.length >= 3) {
                                     var icon = site_root_path + "assets/img/favicon.png",
-                                    title = insight.prefix,
-                                    message = $(document.createElement('div')).hide().append(insight.text).text().replace(':', '...');
+                                    title = "Hey, ThinkUp's got insights!",
+                                    message = "There are " + data.length + " new insights for you.";
                                     notification = window.webkitNotifications.createNotification(icon, title, message);
-                                    notification.onclick = function(x) { 
+                                    notification.onclick = function(x) {
                                         window.open(document.URL);
-                                        this.cancel(); 
+                                        this.cancel();
                                     };
                                     notification.show();
+                                } else {
+                                    for (var i = 0 ; i < data.length; i++) {
+                                        var insight = data[i];
+                                        var icon = site_root_path + "assets/img/favicon.png",
+                                        title = insight.headline,
+                                        message = $(document.createElement('div')).hide().append(insight.text).text().replace(':', '...');
+                                        notification = window.webkitNotifications.createNotification(icon, title, message);
+                                        notification.onclick = function(x) {
+                                            window.open(document.URL);
+                                            this.cancel();
+                                        };
+                                        notification.show();
+                                    }
                                 }
                                 timecheck = Math.round(+new Date()/1000);
                             }
@@ -63,7 +75,7 @@
                     setTimeout(poll,(60*5*1000)); // Wait 5 minutes before polling again
                 })();
                 break;
-                
+
                 case 1:
                 // Permission has not been granted or refused.
                 $('#notify-insights').show();
@@ -71,7 +83,7 @@
                     window.webkitNotifications.requestPermission(checkNotificationPermission);
                 });
                 break;
-                
+
                 case 2:
                 // Permission has been refused.
                 $('#notify-insights').hide();

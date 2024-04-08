@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/model/interface.InsightDAO.php
  *
- * Copyright (c) 2012-2013 Gina Trapani
+ * Copyright (c) 2012-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -23,12 +23,12 @@
  * Insight Data Access Object
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2012-2013 Gina Trapani
+ * @copyright 2012-2016 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  */
 interface InsightDAO {
     /**
-     * Insert insight into storage.
+     * Insert insight into storage. (Deprecated for insight redesign.)
      * @param str $slug
      * @param int $instance_id
      * @param str $date
@@ -39,8 +39,15 @@ interface InsightDAO {
      * @param str $related_data Defaults to null
      * @return bool
      */
-    public function insertInsight($slug, $instance_id, $date, $prefix, $text, $filename,
+    public function insertInsightDeprecated($slug, $instance_id, $date, $prefix, $text, $filename,
     $emphasis=Insight::EMPHASIS_LOW, $related_data=null);
+    /**
+     * Insert insight into storage.
+     * @param Insight $insight
+     * @return bool
+     * @throws InsightFieldNotSetException
+     */
+    public function insertInsight(Insight $insight);
     /**
      * Retrieve insight from storage.
      * @param str $slug
@@ -66,7 +73,7 @@ interface InsightDAO {
      * @return Insight
      */
     public function getPreCachedInsightData($slug, $instance_id, $date);
-    /*
+    /**
      * Remove insight from storage.
      * @param str $slug
      * @param int $instance_id
@@ -100,7 +107,7 @@ interface InsightDAO {
      * @param str $related_data Defaults to null.
      * @return bool
      */
-    public function updateInsight($slug, $instance_id, $date, $prefix, $text, $emphasis=Insight::EMPHASIS_LOW,
+    public function updateInsightDeprecated($slug, $instance_id, $date, $prefix, $text, $emphasis=Insight::EMPHASIS_LOW,
     $related_data=null);
     /**
      * Get a page of insights for all public users.
@@ -110,12 +117,34 @@ interface InsightDAO {
      */
     public function getPublicInsights($page_count=10, $page_number=1);
     /**
+     * Get a page of end-of-year insights for all public users.
+     * @param int $page_count Number of insight baselines to return
+     * @param int $page_number Page number
+     * @param str $since Since this date
+     * @return array Insights
+     */
+    public function getPublicEOYInsights($page_count=10, $page_number=1, $since=null);
+    /**
      * Get a page of insights for all users, public and private.
      * @param int $page_count
      * @param int $page_number
      * @return array Insights
      */
     public function getAllInstanceInsights($page_count=10, $page_number=1);
+    /**
+     * Get a page of end-of-year insights for all users, public and private.
+     * @param int $page_count
+     * @param int $page_number
+     * @param str $since Since this date
+     * @return array Insights
+     */
+    public function getAllInstanceEOYInsights($page_count=10, $page_number=1, $since=null);
+    /**
+     * Get a insights for all users, public and private, created since a specified timestamp.
+     * @param int $since Timestamp
+     * @return array Insights
+     */
+    public function getAllInstanceInsightsSince($since);
     /**
      * Get an owner's insights created since a specified timestamp.
      * @param int $owner_id
@@ -128,9 +157,21 @@ interface InsightDAO {
      * @param int $owner_id
      * @param int $page_count
      * @param int $page
+     * @param int $page_count_offset Default 1
      * @return array Insights
      */
-    public function getAllOwnerInstanceInsights($owner_id, $page_count=20, $page=1);
+    public function getAllOwnerInstanceInsights($owner_id, $page_count=20, $page=1, $page_count_offset=1);
+    /**
+     * Get a page of end-of-year insights by instances associated with an owner.
+     * @param int $owner_id
+     * @param int $page_count
+     * @param int $page
+     * @param int $page_count_offset Default 1
+     * @param str $since Since this date
+     * @return array Insights
+     */
+    public function getAllOwnerInstanceEOYInsights($owner_id, $page_count=20, $page=1, $page_count_offset=1,
+        $since=null);
     /**
      * Check whether or not a insight exists for an instance by slug.
      * @param $slug
@@ -138,4 +179,12 @@ interface InsightDAO {
      * @return bool
      */
     public function doesInsightExist($slug, $instance_id);
+
+    /**
+     * Return the most recent insight for a given instance and slug
+     * @param $slug
+     * @param $instance_id
+     * @return Insight
+     */
+    public function getMostRecentInsight($slug, $instance_id);
 }

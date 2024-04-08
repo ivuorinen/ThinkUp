@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/model/class.InstanceMySQLDAO.php
  *
- * Copyright (c) 2009-2013 Gina Trapani, Mark Wilkie, Guillaume Boudreau
+ * Copyright (c) 2009-2016 Gina Trapani, Mark Wilkie, Guillaume Boudreau
  *
  * LICENSE:
  *
@@ -24,7 +24,7 @@
  * Instance MySQL Data Access Object Implementation
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani, Mark Wilkie, Guillaume Boudreau
+ * @copyright 2009-2016 Gina Trapani, Mark Wilkie, Guillaume Boudreau
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  */
 class InstanceMySQLDAO extends PDOCorePluginDAO implements InstanceDAO {
@@ -259,6 +259,24 @@ class InstanceMySQLDAO extends PDOCorePluginDAO implements InstanceDAO {
         return $this->getDataRowsAsObjects($ps, $this->object_name);
     }
 
+    public function getByOwnerWithStatus(Owner $owner) {
+        if ($owner == null) {
+            return null;
+        }
+        $vars = array(
+            ':owner_id'=>$owner->id
+        );
+        $q  = "SELECT ".$this->getFieldList();
+        $q .= ", oi.auth_error FROM ".$this->getTableName()." ";
+        $q .= $this->getMetaTableJoin();
+        $q .= "INNER JOIN #prefix#owner_instances AS oi ";
+        $q .= "ON ".$this->getTableName().".id = oi.instance_id ";
+        $q .= "WHERE oi.owner_id = :owner_id  AND is_active = 1 ORDER BY id ASC;";
+        if ($this->profiler_enabled) { Profiler::setDAOMethod(__METHOD__); }
+        $ps = $this->execute($q, $vars);
+        return $this->getDataRowsAsObjects($ps, $this->object_name);
+    }
+
     public function getPublicInstances() {
         $q  = "SELECT ".$this->getFieldList();
         $q .= "FROM ".$this->getTableName()." ";
@@ -428,7 +446,11 @@ class InstanceMySQLDAO extends PDOCorePluginDAO implements InstanceDAO {
 
         //former subquery 2 for total_posts_in_system
         $q = "SELECT COUNT(*) AS total_posts_in_system FROM #prefix#posts ";
-        $q .= "WHERE author_user_id=:user_id AND network = :network";
+        $q .= "WHERE author_user_id=:user_id AND network = :network ";
+        if ($instance_object->network == 'instagram') {
+            //Don't count comments on Instagram posts in total_posts_in_system, just photos/videos
+            $q .= "AND in_reply_to_post_id IS NULL ";
+        }
         if ($this->profiler_enabled) { Profiler::setDAOMethod(__METHOD__); }
         $ps = $this->execute($q, $vars);
         $result = $this->getDataRowAsArray($ps);
@@ -618,6 +640,16 @@ class InstanceMySQLDAO extends PDOCorePluginDAO implements InstanceDAO {
             ':id'=>$id,
             ':network_username'=>$network_username
         );
+        if ($this->profiler_enabled) { Profiler::setDAOMethod(__METHOD__); }
+        $ps = $this->execute($q, $vars);
+        return $this->getUpdateCount($ps);
+    }
+
+    public function setPostArchiveLoaded($network_user_id, $network) {
+        $q = "UPDATE ".$this->getTableName()." SET is_archive_loaded_posts = 1 WHERE network_user_id = :network_id AND";
+        $q .= " network=:network";
+        $vars[':network_id'] = $network_user_id;
+        $vars[':network'] = $network;
         if ($this->profiler_enabled) { Profiler::setDAOMethod(__METHOD__); }
         $ps = $this->execute($q, $vars);
         return $this->getUpdateCount($ps);

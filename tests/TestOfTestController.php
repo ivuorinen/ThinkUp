@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/TestOfTestController.php
  *
- * Copyright (c) 2009-2013 Gina Trapani, Guillaume Boudreau, Mark Wilkie
+ * Copyright (c) 2009-2016 Gina Trapani, Guillaume Boudreau, Mark Wilkie
  *
  * LICENSE:
  *
@@ -24,7 +24,7 @@
  *
  * TestController isn't a real ThinkUp controller, this is just a template for all Controller tests.
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani, Guillaume Boudreau, Mark Wilkie
+ * @copyright 2009-2016 Gina Trapani, Guillaume Boudreau, Mark Wilkie
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  */
 require_once dirname(__FILE__).'/init.tests.php';
@@ -186,5 +186,29 @@ class TestOfTestController extends ThinkUpUnitTestCase {
         $this->assertPattern('/Testing exception handling/', $results);
         $this->assertEqual('Exception', $v_mgr->getTemplateDataItem('error_type'));
         unset($_GET['text']);
+    }
+
+    /**
+     * Test that a session is started when the controller has run
+     */
+    public function testSessionStarted() {
+        $dao = DAOFactory::getDAO('SessionDAO');
+        $sid = 'abcd';
+        session_id($sid);
+
+        $controller = new TestController(true);
+
+        $session = $dao->read($sid);
+        $this->assertEqual('', $session);
+        session_write_close();
+
+        $config = Config::getInstance();
+        $config->setValue('use_db_sessions', true);
+        $controller = new TestController(false);
+        $rand = md5(mt_rand(1,12122131231));
+        $_SESSION['test'] = $rand;
+        session_write_close();
+        $session = $dao->read($sid);
+        $this->assertPattern('/'.$rand.'/', $session);
     }
 }

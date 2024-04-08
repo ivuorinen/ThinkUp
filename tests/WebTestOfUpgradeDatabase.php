@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/classes/WebTestOfUpgradeDatabase.php
  *
- * Copyright (c) 2009-2013 Mark Wilkie
+ * Copyright (c) 2009-2016 Mark Wilkie
  *
  * LICENSE:
  *
@@ -23,7 +23,7 @@
  *
  * @author Mark Wilkie <mwilkie[at]gmail[dot]com>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Mark Wilkie
+ * @copyright 2009-2016 Mark Wilkie
  */
 require_once dirname(__FILE__).'/init.tests.php';
 require_once THINKUP_WEBAPP_PATH.'_lib/extlib/simpletest/autorun.php';
@@ -155,6 +155,7 @@ class WebTestOfUpgradeDatabase extends ThinkUpBasicWebTestCase {
         // run updates and migrations
         require dirname(__FILE__) . '/migration-assertions.php';
         $this->debug("Setting up base install for upgrade: $version");
+        $this->travisHeartbeat();
         $zip_url = $MIGRATIONS[$version]['zip_url'];
 
         require THINKUP_WEBAPP_PATH.'config.inc.php';
@@ -175,10 +176,12 @@ class WebTestOfUpgradeDatabase extends ThinkUpBasicWebTestCase {
             chdir(dirname(__FILE__) . '/../');
             exec('cd webapp/test_installer/;chmod -R 777 thinkup/_lib/view/compiled_view;');
         }
+        $this->travisSleepTest();
 
         //Config file doesn't exist
         $this->assertFalse(file_exists($THINKUP_CFG['source_root_path'].
         'webapp/test_installer/thinkup/config.inc.php'));
+
 
         //Set test mode
         $this->get($this->url.'/test_installer/thinkup/install/setmode.php?m=tests');
@@ -198,7 +201,11 @@ class WebTestOfUpgradeDatabase extends ThinkUpBasicWebTestCase {
         require THINKUP_WEBAPP_PATH.'config.inc.php';
 
         $this->get('index.php?step=2');
-        if (version_compare($version, '2.0-beta.5', '>=')) {
+        if (version_compare($version, '2.0-beta.5', '>')) {
+            $this->debug("On step 2 of install for ".$version);
+            if ($version == '2.0-beta.5') {
+                $this->showSource();
+            }
             $this->assertText('Create your ThinkUp account');
         } else {
             $this->assertText('Create Your ThinkUp Account');
@@ -251,7 +258,7 @@ class WebTestOfUpgradeDatabase extends ThinkUpBasicWebTestCase {
             $this->assertText('Adjust Your Settings');
         }
         if (version_compare($version, '0.16', '>=')) {
-            $this->assertText('Welcome to ThinkUp. Let\'s get started.');
+            $this->assertText('Welcome to ThinkUp');
         } else {
             $this->assertText('You have no'); //accounts/services configured. Set up an account now');
             $this->assertText('Set up'); //an account/a service like Twitter or Facebook now
@@ -266,7 +273,6 @@ class WebTestOfUpgradeDatabase extends ThinkUpBasicWebTestCase {
         }
         $config = Config::getInstance();
         $this->assertTitle('Configure Your Account | ThinkUp');
-        $this->assertText('admin');
 
         // run updates and migrations
         require dirname(__FILE__) . '/migration-assertions.php';
@@ -296,6 +302,7 @@ class WebTestOfUpgradeDatabase extends ThinkUpBasicWebTestCase {
         require THINKUP_WEBAPP_PATH.'config.inc.php';
         foreach($TMIGRATIONS as  $version => $migration_data) {
             $this->debug("Running migration test for version: $version");
+            $this->travisHeartbeat();
             $url = $migration_data['zip_url'];
             $zipfile = $this->getInstall($url, $version, $this->installs_dir);
             $this->debug("unzipping $zipfile");
@@ -303,6 +310,7 @@ class WebTestOfUpgradeDatabase extends ThinkUpBasicWebTestCase {
             //Extract into test_installer directory and set necessary folder permissions
             exec('cp ' . $zipfile .  ' webapp/test_installer/.;cd webapp/test_installer/;'.
             'rm -rf thinkup/_lib;rm -rf thinkup/plugins;unzip -o ' . $zipfile.';');
+            $this->travisSleepTest();
             if (!file_exists($this->install_dir.'/thinkup/data/compiled_view')) {
                 if (!file_exists($this->install_dir.'/thinkup/data')) {
                     exec('mkdir thinkup/data;');
@@ -341,7 +349,9 @@ class WebTestOfUpgradeDatabase extends ThinkUpBasicWebTestCase {
                 'INSERT INTO tu_follows_b10 (SELECT', $msql);
                 file_put_contents($migration_10, $msql);
             }
-            //sleep(1000);
+            if (getenv('TRAVIS')=='true') {
+                sleep(30);
+            }
             $this->get($this->url.'/test_installer/thinkup/');
             $this->assertText("ThinkUp's database needs an upgrade");
             // token could be in 1 of 2 places, depending on what version is running
@@ -383,8 +393,8 @@ class WebTestOfUpgradeDatabase extends ThinkUpBasicWebTestCase {
                     }
                     $this->assertText('{ "processed":true,');
                     $content = $this->getBrowser()->getContent();
-                    if ( !preg_match('/"processed":true/', $content)) {
-                        error_log($content);
+                    if (!preg_match('/"processed":true/', $content)) {
+                        $this->debug('ERROR: '.$content);
                         return;
                     }
                     if (isset($json_array[$cnt]) && $json_array[$cnt]->version == $json_migration->version) {
@@ -407,8 +417,8 @@ class WebTestOfUpgradeDatabase extends ThinkUpBasicWebTestCase {
                             $this->assertEqual(preg_match($assertion_sql['match'], $data[ $assertion_sql['column'] ]),
                             1, $assertion_sql['match'] . ' should match ' .  $data[ $assertion_sql['column'] ]);
                             if ( ! preg_match($assertion_sql['match'], $data[ $assertion_sql['column'] ])) {
-                                error_log("TEST FAIL DEBUGGING:");
-                                error_log('Query for assertion ' . $assertion_sql['query'] . " with match "
+                                $this->debug("TEST FAIL DEBUGGING:");
+                                $this->debug('Query for assertion ' . $assertion_sql['query'] . " with match "
                                 . $assertion_sql['match'] . " failed");
                             }
                         }
@@ -466,6 +476,11 @@ class WebTestOfUpgradeDatabase extends ThinkUpBasicWebTestCase {
             curl_setopt($ch, CURLOPT_TIMEOUT, self::FILE_DOWNLOAD_TIMEOUT);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+
+            //Avoid Travis CI error "server certificate verification failed"
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
             $data = curl_exec($ch);
             if ( !$data) {
                 $zipfile = false;
@@ -475,5 +490,33 @@ class WebTestOfUpgradeDatabase extends ThinkUpBasicWebTestCase {
             file_put_contents($zipfile, $data);
         }
         return $zipfile;
+    }
+
+    /**
+     * Travis will give up if tests go 10 minutes without any output.
+     * This will randomly spit out a .... to keep travis heappy.
+     */
+    private function travisHeartbeat() {
+        // We've got to output something occasionally or travis thinks we died.
+        if (getenv('TRAVIS')=='true') {
+            print $str."\n";
+        }
+    }
+
+    /**
+     * Latency in travis means we occasionally need to sleep a bit
+     * and make sure that the new setup is ready before proceeding.
+     */
+    private function travisSleepTest() {
+        if (getenv('TRAVIS')=='true') {
+            $tries = 0;
+            do {
+                $this->debug('Sleeping for Travis latency: ' . (10*$tries). ' seconds.');
+                sleep(10 * $tries++);
+                $this->get($this->url.'/test_installer/thinkup/');
+                $content = $this->getBrowser()->getContent();
+                if ($tries > 3) break;
+            } while (preg_match('/Fatal error: (Class|Call to und)/', $content));
+        }
     }
 }

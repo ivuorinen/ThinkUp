@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/TestOfRSSController.php
  *
- * Copyright (c) 2009-2013 Guillaume Boudreau
+ * Copyright (c) 2009-2016 Guillaume Boudreau
  *
  * LICENSE:
  *
@@ -23,7 +23,7 @@
  * Test of RSSController
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Guillaume Boudreau
+ * @copyright 2009-2016 Guillaume Boudreau
  * @author Guillaume Boudreau <gboudreau@pommepause.com>
  *
  */
@@ -114,10 +114,11 @@ class TestOfRSSController extends ThinkUpUnitTestCase {
 
         $time_now = date("Y-m-d H:i:s");
         $builders[] = FixtureBuilder::build('insights', array(
-            'prefix' => 'Hello:',
+            'headline' => 'Hello:',
             'text' => 'This is a test of a hello world insight',
             'instance_id' => 1,
-            'time_generated' => $time_now
+            'time_generated' => $time_now,
+            'related_data'=>null
         ));
 
         return $builders;

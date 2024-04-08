@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/class.DAOFactory.php
  *
- * Copyright (c) 2009-2013 Mark Wilkie, Gina Trapani
+ * Copyright (c) 2009-2016 Mark Wilkie, Gina Trapani
  *
  * LICENSE:
  *
@@ -35,7 +35,7 @@
  * </code>
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Mark Wilkie, Gina Trapani
+ * @copyright 2009-2016 Mark Wilkie, Gina Trapani
  * @author Mark Wilkie
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  */
@@ -60,6 +60,14 @@ class DAOFactory {
         'TwitterInstanceDAO' => array(
     //MySQL Version
             'mysql' => 'TwitterInstanceMySQLDAO' ),
+    //Facebook Instance DAO
+        'FacebookInstanceDAO' => array(
+    //MySQL Version
+            'mysql' => 'FacebookInstanceMySQLDAO' ),
+    //Instagram Instance DAO
+        'InstagramInstanceDAO' => array(
+    //MySQL Version
+            'mysql' => 'InstagramInstanceMySQLDAO' ),
     //Invite DAO
         'InviteDAO' => array(
     //MySQL Version
@@ -136,10 +144,10 @@ class DAOFactory {
         'PluginOptionDAO' => array(
     //MySQL Version
             'mysql' => 'PluginOptionMySQLDAO' ),
-    //Follower Count MySQL DAO
-        'FollowerCountDAO' => array(
+    //Count History MySQL DAO
+        'CountHistoryDAO' => array(
     //MySQL Version
-            'mysql' => 'FollowerCountMySQLDAO'),
+            'mysql' => 'CountHistoryMySQLDAO'),
     //Installer MySQL DAO
         'InstallerDAO' => array (
     //MySQL Version
@@ -160,10 +168,6 @@ class DAOFactory {
         'GroupDAO' => array (
     //MySQL Version
             'mysql' => 'GroupMySQLDAO'),
-    //Group Membership Count MySQL DAO
-        'GroupMembershipCountDAO' => array (
-    //MySQL Version
-            'mysql' => 'GroupMembershipCountMySQLDAO'),
     //Group Member MySQL DAO
         'GroupMemberDAO' => array (
     //MySQL Version
@@ -194,7 +198,25 @@ class DAOFactory {
     //Hashtag Post DAO
         'HashtagPostDAO' => array(
     //MySQL Version
-            'mysql' => 'HashtagPostMySQLDAO' )
+            'mysql' => 'HashtagPostMySQLDAO' ),
+    //Video DAO
+        'VideoDAO' => array(
+    //MySQL Version
+            'mysql' => 'VideoMySQLDAO' ),
+    //Photo DAO
+        'PhotoDAO' => array(
+    //MySQL Version
+            'mysql' => 'PhotoMySQLDAO' ),
+        'SessionDAO' => array(
+    //MySQL Version
+            'mysql' => 'SessionMySQLDAO' ),
+        'CookieDAO' => array(
+    //MySQL Version
+            'mysql' => 'CookieMySQLDAO' ),
+        'UserVersionsDAO' => array(
+    //MySQL Version
+            'mysql' => 'UserVersionsMySQLDAO' )
+
     );
 
     /*

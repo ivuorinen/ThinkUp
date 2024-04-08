@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/TestOfDAOFactory.php
  *
- * Copyright (c) 2009-2013 Gina Trapani, Mark Wilkie, Christoffer Viken
+ * Copyright (c) 2009-2016 Gina Trapani, Mark Wilkie, Christoffer Viken
  *
  * LICENSE:
  *
@@ -24,7 +24,7 @@
  * Test of DAOFactory
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani, Mark Wilkie, Christoffer Viken
+ * @copyright 2009-2016 Gina Trapani, Mark Wilkie, Christoffer Viken
  * @author Mark Wilkie
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  *
@@ -33,6 +33,8 @@ require_once dirname(__FILE__).'/init.tests.php';
 require_once THINKUP_WEBAPP_PATH.'_lib/extlib/simpletest/autorun.php';
 require_once THINKUP_WEBAPP_PATH.'config.inc.php';
 require_once THINKUP_WEBAPP_PATH.'plugins/twitter/model/class.TwitterInstanceMySQLDAO.php';
+require_once THINKUP_WEBAPP_PATH.'plugins/facebook/model/class.FacebookInstanceMySQLDAO.php';
+require_once THINKUP_WEBAPP_PATH.'plugins/instagram/model/class.InstagramInstanceMySQLDAO.php';
 
 class TestOfDAOFactory extends ThinkUpUnitTestCase {
 
@@ -271,12 +273,21 @@ class TestOfDAOFactory extends ThinkUpUnitTestCase {
     }
 
     /**
-     * Test get FollowerCountDAO
+     * Test get CountHistoryDAO
      */
-    public function testGetFollowerCountDAO() {
-        $plugin_dao = DAOFactory::getDAO('FollowerCountDAO');
+    public function testGetCountHistoryDAO() {
+        $plugin_dao = DAOFactory::getDAO('CountHistoryDAO');
         $this->assertNotNull($plugin_dao);
-        $this->assertIsA($plugin_dao, 'FollowerCountMySQLDAO');
+        $this->assertIsA($plugin_dao, 'CountHistoryMySQLDAO');
+    }
+
+    /**
+     * Test get CookieDAO
+     */
+    public function testGetCookieDAO() {
+        $plugin_dao = DAOFactory::getDAO('CookieDAO');
+        $this->assertNotNull($plugin_dao);
+        $this->assertIsA($plugin_dao, 'CookieMySQLDAO');
     }
 
     /**
@@ -329,6 +340,22 @@ class TestOfDAOFactory extends ThinkUpUnitTestCase {
         $this->assertIsA($dao, 'TwitterInstanceMySQLDAO');
     }
     /**
+     * Test get FacebookInstanceDAO
+     */
+    public function testGetFacebookInstanceDAO() {
+        $dao = DAOFactory::getDAO('FacebookInstanceDAO');
+        $this->assertNotNull($dao);
+        $this->assertIsA($dao, 'FacebookInstanceMySQLDAO');
+    }
+    /**
+     * Test get InstagramInstanceDAO
+     */
+    public function testGetInstagramInstanceDAO() {
+        $dao = DAOFactory::getDAO('InstagramInstanceDAO');
+        $this->assertNotNull($dao);
+        $this->assertIsA($dao, 'InstagramInstanceMySQLDAO');
+    }
+    /**
      * Test get PostExportDAO
      */
     public function testGetPostExportDAO() {
@@ -358,12 +385,6 @@ class TestOfDAOFactory extends ThinkUpUnitTestCase {
         $this->assertIsA($dao, 'GroupMemberMySQLDAO');
     }
 
-    public function testGetGroupMembershipDAO() {
-        $dao = DAOFactory::getDAO('GroupMembershipCountDAO');
-        $this->assertNotNull($dao);
-        $this->assertIsA($dao, 'GroupMembershipCountMySQLDAO');
-    }
-
     public function testGetTableStatsDAO() {
         $dao = DAOFactory::getDAO('TableStatsDAO');
         $this->assertNotNull($dao);
@@ -387,6 +408,32 @@ class TestOfDAOFactory extends ThinkUpUnitTestCase {
         $this->assertNotNull($dao);
         $this->assertIsA($dao, 'InsightMySQLDAO');
     }
+
+    public function testVideoDAO() {
+        $dao = DAOFactory::getDAO('VideoDAO');
+        $this->assertNotNull($dao);
+        $this->assertIsA($dao, 'VideoMySQLDAO');
+    }
+
+    public function testPhotoDAO() {
+        $dao = DAOFactory::getDAO('PhotoDAO');
+        $this->assertNotNull($dao);
+        $this->assertIsA($dao, 'PhotoMySQLDAO');
+    }
+
+    public function testSessionDAO() {
+        $dao = DAOFactory::getDAO('SessionDAO');
+        $this->assertNotNull($dao);
+        $this->assertIsA($dao, 'SessionMySQLDAO');
+        $this->assertIsA($dao, 'SessionDAO');
+    }
+
+    public function testGetUserVersionsDAO() {
+        $plugin_dao = DAOFactory::getDAO('UserVersionsDAO');
+        $this->assertNotNull($plugin_dao);
+        $this->assertIsA($plugin_dao, 'UserVersionsMySQLDAO');
+    }
+
     /**
      * Test get InstallerDAO without a config file, override with array of config values
      */
@@ -399,8 +446,9 @@ class TestOfDAOFactory extends ThinkUpUnitTestCase {
         $this->assertTrue(isset($dao));
         $this->assertIsA($dao, 'InstallerMySQLDAO');
         $result = $dao->getTables();
-        $this->assertEqual(sizeof($result), 32);
-        $this->assertEqual($result[0], $cfg_values["table_prefix"].'encoded_locations');
+        $this->assertEqual(sizeof($result), 38);
+        $this->assertEqual($result[0], $cfg_values["table_prefix"].'cookies');
+        $this->assertEqual($result[1], $cfg_values["table_prefix"].'count_history');
         $this->restoreConfigFile();
     }
     /**

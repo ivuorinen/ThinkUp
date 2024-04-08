@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/controller/class.CheckCrawlerController.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -24,7 +24,7 @@
  * CheckCrawler Controller
  * Outputs a message if crawler hasn't run in over 3 hours.
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  *
  */
@@ -49,7 +49,8 @@ class CheckCrawlerController extends ThinkUpController {
         $instance_dao = DAOFactory::getDAO('InstanceDAO');
         $hours_since_last_crawl = $instance_dao->getHoursSinceLastCrawlerRun();
         if (isset($hours_since_last_crawl) && $hours_since_last_crawl > $this->threshold)  {
-            $this->addToView('message', "Crawler hasn't run in ".round($hours_since_last_crawl)." hours");
+            $this->addToView('message', Utils::getApplicationURL().": Crawler hasn't run in ".
+            round($hours_since_last_crawl)." hours");
         }
         return $this->generateView();
     }

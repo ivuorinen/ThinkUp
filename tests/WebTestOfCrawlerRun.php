@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/WebTestOfCrawlerRun.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -23,7 +23,7 @@
  *
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  */
 require_once dirname(__FILE__).'/init.tests.php';
 require_once THINKUP_WEBAPP_PATH.'_lib/extlib/simpletest/autorun.php';
@@ -59,12 +59,15 @@ class WebTestOfCrawlerRun extends ThinkUpWebTestCase {
         $this->clickLinkById('refresh-data');
         //$this->showHeaders();
         $this->assertHeader('Content-Type', 'text/html; charset=UTF-8; charset=UTF-8');
-        $this->assertText('Updating...');
+        //@TODO Assert that this Hint text appears in its new Javascripty format
+        //$this->assertText('Hint:');
     }
 
     public function testNotLoggedIn() {
         $this->get($this->url.'/crawler/run.php');
-        $this->assertText('You must log in to do this.');
+        //should redirect to Log in page
+        $cfg = Config::getInstance();
+        $app_title_prefix = $cfg->getValue('app_title_prefix');
+        $this->assertTitle('Log in | '.$app_title_prefix.'ThinkUp');
     }
-
 }

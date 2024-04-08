@@ -1,9 +1,9 @@
 <?php
 /*
  Plugin Name: Twitter
- Plugin URI: http://github.com/ginatrapani/thinkup/tree/master/webapp/plugins/twitter/
+ Plugin URI: https://github.com/ThinkUpLLC/ThinkUp/tree/master/webapp/plugins/twitter/
  Description: Capture and display tweets.
- Icon: assets/img/twitter_icon.png
+ Icon: twitter
  Class: TwitterPlugin
  Version: 0.01
  Author: Gina Trapani
@@ -13,7 +13,7 @@
  *
  * ThinkUp/webapp/plugins/twitter/controller/twitter.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -33,7 +33,7 @@
 /**
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  */
 $config = Config::getInstance();
 //For testing, check if mock class has already been loaded

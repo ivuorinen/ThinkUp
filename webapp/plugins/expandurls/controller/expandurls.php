@@ -1,9 +1,9 @@
 <?php
 /*
  Plugin Name: Expand URLs
- Plugin URI: http://github.com/ginatrapani/thinkup/tree/master/webapp/plugins/expandurls/
+ Plugin URI: https://github.com/ThinkUpLLC/ThinkUp/tree/master/webapp/plugins/expandurls/
  Description: Expand shortened links.
- Icon: assets/img/plugin_icon.png
+ Icon: link
  Version: 0.01
  Author: Gina Trapani
  */
@@ -12,7 +12,7 @@
  *
  * ThinkUp/webapp/plugins/expandurls/controller/expandurls.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -31,7 +31,7 @@
  *
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  */
 
 $webapp_plugin_registrar = PluginRegistrarWebapp::getInstance();

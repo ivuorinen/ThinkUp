@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/model/class.PDODAO.php
  *
- * Copyright (c) 2009-2013 Mark Wilkie, Christoffer Viken, Gina Trapani
+ * Copyright (c) 2009-2016 Mark Wilkie, Christoffer Viken, Gina Trapani
  *
  * LICENSE:
  *
@@ -24,7 +24,7 @@
  * PDO DAO
  * Parent class for PDO DAOs
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Mark Wilkie, Christoffer Viken, Gina Trapani
+ * @copyright 2009-2016 Mark Wilkie, Christoffer Viken, Gina Trapani
  * @author Christoffer Viken <christoffer@viken.me>
  * @author Mark Wilkie
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
@@ -67,6 +67,8 @@ abstract class PDODAO {
      * @param array $cfg_vals Optionally override config.inc.php vals; needs 'table_prefix', 'GMT_offset', 'db_type',
      * 'db_socket', 'db_name', 'db_host', 'db_user', 'db_password'
      * @return PDODAO
+     * @throws PDOException
+     * @throws DataExceedsColumnWidthException
      */
     public function __construct($cfg_vals=null){
         $this->logger = Logger::getInstance();
@@ -203,12 +205,22 @@ abstract class PDODAO {
             $exception_details = 'Database error! ';
             if ($config->getValue('debug') !== false) {
                 $exception_details .= 'ThinkUp could not execute the following query: '.
-                str_replace(chr(10), "", $stmt->queryString) . ' PDOException: '. $e->getMessage();
+                str_replace(chr(10), "", $stmt->queryString) . ' Details: '. $e->getMessage();
             } else {
-                $exception_details .=
-                ' To see the technical details of what went wrong, set debug = true in ThinkUp\'s config file.';
+                if (!Utils::isThinkUpLLC()) {
+                    $exception_details .=
+                    ' To see the technical details of what went wrong, set debug = true in ThinkUp\'s config file.';
+                } else {
+                    $exception_details .=
+                    ' Contact us at help@thinkup.com.';
+
+                }
             }
-            throw new PDOException ($exception_details);
+            if ( strpos($e->getMessage(),'Data too long for column') !== false) {
+                throw new DataExceedsColumnWidthException($exception_details);
+            } else {
+                throw new PDOException ($exception_details);
+            }
         }
         if ($this->profiler_enabled) {
             $end_time = microtime(true);

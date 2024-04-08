@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/TestOfReporter.php
  *
- * Copyright (c) 2011-2013 Gina Trapani
+ * Copyright (c) 2011-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -22,7 +22,7 @@
  *
  * Test of Plugin class
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2011-2013 Gina Trapani
+ * @copyright 2011-2016 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  */
 require_once dirname(__FILE__).'/init.tests.php';
@@ -32,6 +32,10 @@ require_once THINKUP_WEBAPP_PATH.'config.inc.php';
 class TestOfReporter extends ThinkUpUnitTestCase {
 
     public function testReportVersion() {
+
+        $config = Config::getInstance();
+        $site_root_path = $config->getValue('site_root_path');
+
         //create new instance
         $instance = new Instance();
         $instance->network_username = 'danica mckellar';
@@ -41,7 +45,7 @@ class TestOfReporter extends ThinkUpUnitTestCase {
         //report version
         $result = Reporter::reportVersion($instance);
         $this->assertPattern("/http:\/\/thinkup.com\/version.php\?v\=/", $result[0]);
-        $this->assertEqual($result[1], "http://mytestthinkup/?u=danica+mckellar&n=twitter");
+        $this->assertEqual($result[1], "http://mytestthinkup$site_root_path?u=danica+mckellar&n=twitter");
         $this->assertEqual($result[2], 200);
     }
 }

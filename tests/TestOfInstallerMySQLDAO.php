@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/TestOfInstallerMySQLDAO.php
  *
- * Copyright (c) 2009-2013 Gina Trapani, Mark Wilkie
+ * Copyright (c) 2009-2016 Gina Trapani, Mark Wilkie
  *
  * LICENSE:
  *
@@ -23,7 +23,7 @@
  * Test Of Installer MySQLDAO
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani, Guillaume Boudreau
+ * @copyright 2009-2016 Gina Trapani, Guillaume Boudreau
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  */
 require_once dirname(__FILE__).'/init.tests.php';
@@ -82,8 +82,9 @@ class TestOfInstallerMySQLDAO extends ThinkUpUnitTestCase {
         $config_array = $config->getValuesArray();
         $dao = new InstallerMySQLDAO($config_array);
         $result = $dao->getTables();
-        $this->assertEqual(sizeof($result), 31);
-        $this->assertEqual($result[0], $config_array["table_prefix"].'encoded_locations');
+        $this->assertEqual(sizeof($result), 37);
+        $this->assertEqual($result[0], $config_array["table_prefix"].'cookies');
+        $this->assertEqual($result[1], $config_array["table_prefix"].'count_history');
     }
     public function testCheckTable() {
         $config = Config::getInstance();
@@ -126,7 +127,8 @@ class TestOfInstallerMySQLDAO extends ThinkUpUnitTestCase {
 
     public function testExamineQueries() {
         // test on fully installed tables
-        $install_queries = file_get_contents(THINKUP_ROOT_PATH."webapp/install/sql/build-db_mysql.sql");
+        $install_queries = file_get_contents(THINKUP_ROOT_PATH.
+        "webapp/install/sql/build-db_mysql-upcoming-release.sql");
 
         $this->debug(Utils::varDumpToString($install_queries));
 

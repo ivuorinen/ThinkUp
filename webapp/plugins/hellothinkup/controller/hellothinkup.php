@@ -1,11 +1,11 @@
 <?php
 /*
  Plugin Name: Hello ThinkUp
- Plugin URI: http://github.com/ginatrapani/thinkup/tree/master/webapp/plugins/hellothinkup/
+ Plugin URI: https://github.com/ThinkUpLLC/ThinkUp/tree/master/webapp/plugins/hellothinkup/
  Description: Developer example plugin.
  Class: HelloThinkUpPlugin
  Version: 0.01
- Icon: assets/img/plugin_icon.png
+ Icon: puzzle-piece
  Author: Gina Trapani
  */
 
@@ -13,7 +13,7 @@
  *
  * ThinkUp/webapp/plugins/hellothinkup/controller/hellothinkup.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -33,7 +33,7 @@
 /**
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  */
 
 $webapp_plugin_registrar = PluginRegistrarWebapp::getInstance();

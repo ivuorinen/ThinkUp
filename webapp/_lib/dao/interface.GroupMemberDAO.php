@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/model/interface.GroupMemberDAO.php
  *
- * Copyright (c) 2011-2013 SwellPath, Inc.
+ * Copyright (c) 2011-2016 SwellPath, Inc.
  *
  * LICENSE:
  *
@@ -24,7 +24,7 @@
  * Group Member Data Access Object Interface
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2011-2013 SwellPath, Inc.
+ * @copyright 2011-2016 SwellPath, Inc.
  * @author Christian G. Warden <cwarden[at]xerus[dot]org>
  */
 interface GroupMemberDAO {
@@ -88,4 +88,13 @@ interface GroupMemberDAO {
      * @return arr Group objects
      */
     public function getNewMembershipsByDate($network, $user_id, $from_date=null);
+
+    /**
+     * Get a list of group memberships first since a give datetime
+     * @param str $network
+     * @param str $user_id
+     * @param str $from_datetime
+     * @return arr Group objects
+     */
+    public function getNewMembershipsSince($network, $user_id, $from_datetime);
 }

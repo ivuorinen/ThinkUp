@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/model/class.GroupMemberMySQLDAO.php
  *
- * Copyright (c) 2011-2013 SwellPath, Inc.
+ * Copyright (c) 2011-2016 SwellPath, Inc.
  *
  * LICENSE:
  *
@@ -25,7 +25,7 @@
  * (based on class.FollowMySQLDAO.php)
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2011-2013 SwellPath, Inc.
+ * @copyright 2011-2016 SwellPath, Inc.
  * @author Christian G. Warden <cwarden[at]xerus[dot]org>
  *
  */
@@ -163,6 +163,23 @@ class GroupMemberMySQLDAO extends PDODAO implements GroupMemberDAO {
         $q .= "WHERE gm.member_user_id=:member_user_id AND g.network=:network AND gm.is_active=1 ";
         $q .= "AND  (YEAR(gm.first_seen)=YEAR($from_date)) ";
         $q .= "AND (DAYOFMONTH(gm.first_seen)=DAYOFMONTH($from_date)) AND (MONTH(gm.first_seen)=MONTH($from_date)) ";
+        $q .= "ORDER BY gm.first_seen DESC;";
+
+        if ($this->profiler_enabled) { Profiler::setDAOMethod(__METHOD__); }
+        $ps = $this->execute($q, $vars);
+        $groups = $this->getDataRowsAsObjects($ps, "Group");
+        return $groups;
+    }
+
+    public function getNewMembershipsSince($network, $member_user_id, $from_datetime) {
+        $vars = array(
+            ':member_user_id'=> strval($member_user_id),
+            ':network' => $network,
+            ':since' => $from_datetime
+        );
+        $q = "SELECT g.* FROM #prefix#group_members gm INNER JOIN #prefix#groups g on g.group_id = gm.group_id ";
+        $q .= "WHERE gm.member_user_id=:member_user_id AND g.network=:network AND gm.is_active=1 ";
+        $q .= "AND gm.first_seen > :since ";
         $q .= "ORDER BY gm.first_seen DESC;";
 
         if ($this->profiler_enabled) { Profiler::setDAOMethod(__METHOD__); }

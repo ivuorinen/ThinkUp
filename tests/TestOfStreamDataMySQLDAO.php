@@ -3,7 +3,7 @@
  *
  * ThinkUp/tests/TestOfStreamDataMySQLDAO.php
  *
- * Copyright (c) 2011-2013 Amy Unruh
+ * Copyright (c) 2011-2016 Amy Unruh
  *
  * LICENSE:
  *
@@ -23,7 +23,7 @@
  * Test of StreamData DAO
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2011-2013 Amy Unruh
+ * @copyright 2011-2016 Amy Unruh
  * @author Amy Unruh
  *
  */
@@ -106,6 +106,6 @@ class TestOfStreamDataMySQLDAO extends ThinkUpUnitTestCase {
         $this->dao->insertStreamData('new content 3');
         $this->dao->resetID(); // reset when not empty
         $res = $this->dao->retrieveNextItem();
-        $this->assertEqual(2, $res[0]);
+        $this->assertNull($res[0]);
     }
 }

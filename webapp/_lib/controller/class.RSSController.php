@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/controller/class.RSSController.php
  *
- * Copyright (c) 2009-2013 Guillaume Boudreau
+ * Copyright (c) 2009-2016 Guillaume Boudreau
  *
  * LICENSE:
  *
@@ -27,7 +27,7 @@
  * This will allow users to crawl their ThinkUp instances by subscribing to their ThinkUp RSS feed in any RSS reader.
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Guillaume Boudreau
+ * @copyright 2009-2016 Guillaume Boudreau
  * @author Guillaume Boudreau <gboudreau@pommepause.com>
  */
 class RSSController extends ThinkUpAuthAPIController {
@@ -119,11 +119,11 @@ class RSSController extends ThinkUpAuthAPIController {
             foreach ($insights as $insight) {
                 $username_in_title = (($insight->instance->network == 'twitter')?'@':'') .
                 $insight->instance->network_username;
-                $title = str_replace(':', '', $insight->prefix). " (".$username_in_title .")";
+                $title = str_replace(':', '', $insight->headline). " (".$username_in_title .")";
                 $link = $base_url.'?u='.$insight->instance->network_username.'&n='
                 .urlencode($insight->instance->network). '&d='.urlencode(date('Y-m-d', strtotime($insight->date))).
                 '&s='.urlencode($insight->slug);
-                $description = $insight->prefix." ". $insight->text. '<br><a href="'.$link.'">Link</a>';
+                $description = $insight->headline." ". $insight->text. '<br><a href="'.$link.'">Link</a>';
                 $time = strtotime($insight->date);
                 $items[] = self::createRSSItem($title, $link, $description, $time);
             }

@@ -7,7 +7,7 @@
  *
  * ThinkUp/webapp/plugins/insightsgenerator/insights/clickspike.php
  *
- * Copyright (c) 2012-2013 Gina Trapani
+ * Copyright (c) 2012-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -25,19 +25,20 @@
  * <http://www.gnu.org/licenses/>.
  *
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2012-2013 Gina Trapani
+ * @copyright 2012-2016 Gina Trapani
  * @author Gina Trapani <ginatrapani [at] gmail [dot] com>
  */
 class ClickSpikeInsight extends InsightPluginParent implements InsightPlugin {
 
-    public function generateInsight(Instance $instance, $last_week_of_posts, $number_days) {
-        parent::generateInsight($instance, $last_week_of_posts, $number_days);
+    public function generateInsight(Instance $instance, User $user, $last_week_of_posts, $number_days) {
+        parent::generateInsight($instance, $user, $last_week_of_posts, $number_days);
         self::generateInsightBaselines($instance, $number_days);
         $this->logger->logInfo("Begin generating insight", __METHOD__.','.__LINE__);
 
         $insight_baseline_dao = DAOFactory::getDAO('InsightBaselineDAO');
         $shortlink_dao = DAOFactory::getDAO('ShortLinkDAO');
         $filename = basename(__FILE__, ".php");
+        $insight_text = '';
 
         $simplified_post_date = "";
         foreach ($last_week_of_posts as $post) {
@@ -76,10 +77,11 @@ class ClickSpikeInsight extends InsightPluginParent implements InsightPlugin {
                         'ShortLinkMySQLDAO::getRecentClickStats', $instance->id, $simplified_post_date);
 
                         if (isset($click_stats_data)) {
-                            $this->insight_dao->insertInsight('click_high_365_day_'.$link->id, $instance->id,
-                            $simplified_post_date, "New 365-day record!",
+                            $insight_text = "That's a new 365-day record!";
+                            $this->insight_dao->insertInsightDeprecated('click_high_365_day_'.$link->id, $instance->id,
+                            $simplified_post_date,
                             "Viewers clicked $this->username's link <strong>".
-                            number_format($click_count). " times</strong>.", $filename, Insight::EMPHASIS_HIGH,
+                            number_format($click_count). " times</strong>.", $insight_text, $filename, Insight::EMPHASIS_HIGH,
                             serialize(array($link, $click_stats_data)));
 
                             $this->insight_dao->deleteInsight('click_high_30_day_'.$link->id, $instance->id,
@@ -98,10 +100,11 @@ class ClickSpikeInsight extends InsightPluginParent implements InsightPlugin {
                         'ShortLinkMySQLDAO::getRecentClickStats', $instance->id, $simplified_post_date);
 
                         if (isset($click_stats_data)) {
-                            $this->insight_dao->insertInsight('click_high_30_day_'.$link->id, $instance->id,
-                            $simplified_post_date, "New 30-day record!",
+                            $insight_text = "That's a new 30-day record!";
+                            $this->insight_dao->insertInsightDeprecated('click_high_30_day_'.$link->id, $instance->id,
+                            $simplified_post_date,
                             "Viewers clicked $this->username's link <strong>".
-                            number_format( $click_count ). " times</strong>.", $filename, Insight::EMPHASIS_HIGH,
+                            number_format( $click_count ). " times</strong>.", $insight_text, $filename, Insight::EMPHASIS_HIGH,
                             serialize(array($link, $click_stats_data)));
 
                             $this->insight_dao->deleteInsight('click_high_7_day_'.$link->id, $instance->id,
@@ -118,10 +121,11 @@ class ClickSpikeInsight extends InsightPluginParent implements InsightPlugin {
                         'ShortLinkMySQLDAO::getRecentClickStats', $instance->id, $simplified_post_date);
 
                         if (isset($click_stats_data)) {
-                            $this->insight_dao->insertInsight('click_high_7_day_'.$link->id, $instance->id,
-                            $simplified_post_date, "New 7-day record!",
+                            $insight_text = "That's a new 7-day record.";
+                            $this->insight_dao->insertInsightDeprecated('click_high_7_day_'.$link->id, $instance->id,
+                            $simplified_post_date,
                             "Viewers clicked $this->username's link <strong>".
-                            number_format($click_count). " times</strong>.", $filename, Insight::EMPHASIS_HIGH,
+                            number_format($click_count). " times</strong>.", $insight_text, $filename, Insight::EMPHASIS_HIGH,
                             serialize(array($link, $click_stats_data)));
 
                             $this->insight_dao->deleteInsight('click_high_30_day_'.$link->id, $instance->id,
@@ -139,11 +143,11 @@ class ClickSpikeInsight extends InsightPluginParent implements InsightPlugin {
 
                         if (isset($click_stats_data)) {
                             $multiplier = floor($click_count/$average_click_count_30_days->value);
-                            $this->insight_dao->insertInsight('click_spike_30_day_'.$link->id, $instance->id,
-                            $simplified_post_date, "Hot link:",
+                            $this->insight_dao->insertInsightDeprecated('click_spike_30_day_'.$link->id, $instance->id,
+                            $simplified_post_date,
                             "Viewers clicked $this->username's link <strong>". number_format($click_count).
                              " times</strong>, more than <strong>".$multiplier. "x</strong> your 30-day average.",
-                            $filename, Insight::EMPHASIS_LOW, serialize(array($link, $click_stats_data)));
+                            $insight_text, $filename, Insight::EMPHASIS_LOW, serialize(array($link, $click_stats_data)));
 
                             $this->insight_dao->deleteInsight('click_high_30_day_'.$link->id, $instance->id,
                             $simplified_post_date);
@@ -160,11 +164,11 @@ class ClickSpikeInsight extends InsightPluginParent implements InsightPlugin {
 
                         if (isset($click_stats_data)) {
                             $multiplier = floor($click_count/$average_click_count_7_days->value);
-                            $this->insight_dao->insertInsight('click_spike_7_day_'.$link->id, $instance->id,
-                            $simplified_post_date, "Hot Link:",
+                            $this->insight_dao->insertInsightDeprecated('click_spike_7_day_'.$link->id, $instance->id,
+                            $simplified_post_date,
                             "Viewers clicked $this->username's link <strong>". number_format($click_count).
                             " times</strong>, more than <strong>" .$multiplier. "x</strong> your 7-day average.",
-                            $filename, Insight::EMPHASIS_LOW, serialize(array($link, $click_stats_data)));
+                            $insight_text, $filename, Insight::EMPHASIS_LOW, serialize(array($link, $click_stats_data)));
 
                             $this->insight_dao->deleteInsight('click_high_30_day_'.$link->id, $instance->id,
                             $simplified_post_date);

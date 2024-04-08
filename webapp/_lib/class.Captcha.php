@@ -3,7 +3,7 @@
  *
  * ThinkUp/webapp/_lib/class.Captcha.php
  *
- * Copyright (c) 2009-2013 Gina Trapani
+ * Copyright (c) 2009-2016 Gina Trapani
  *
  * LICENSE:
  *
@@ -24,7 +24,7 @@
  * CAPTCHA generator
  * Registration "Prove you're human" CAPTCHA image, with reCAPTCHA support.
  * @license http://www.gnu.org/licenses/gpl.html
- * @copyright 2009-2013 Gina Trapani
+ * @copyright 2009-2016 Gina Trapani
  * @author Gina Trapani <ginatrapani[at]gmail[dot]com>
  *
  */
@@ -72,8 +72,12 @@ class Captcha {
                 break;
             default:
                 $config = Config::getInstance();
-                return "<input name=\"user_code\" id=\"user_code\" type=\"text\" class=\"span1\"><img src=\"".
-                $config->getValue('site_root_path'). "session/captcha-img.php\" style=\"padding-left : 20px;\">&nbsp;";
+                return
+                "<label class=\"control-label\" for=\"user_code\">".
+                "<img src=\"".$config->getValue('site_root_path'). "session/captcha-img.php\" class=\"img-responsive\" style=\"\">".
+                "</label>".
+                "<input name=\"user_code\" id=\"user_code\" type=\"text\" class=\"form-control\" required ".
+                "placeholder=\"Please enter the code.\">";
                 break;
         }
     }
@@ -84,7 +88,7 @@ class Captcha {
      */
     public function doesTextMatchImage() {
         //if in test mode, assume check is good if user_code is set to 123456
-        if ((isset($_SESSION["MODE"]) && $_SESSION["MODE"] == "TESTS") || getenv("MODE")=="TESTS") {
+        if (Utils::isTest()) {
             if (isset($_POST['user_code']) && $_POST['user_code'] == '123456') {
                 return true;
             } else {

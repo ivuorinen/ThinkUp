@@ -21,12 +21,12 @@ This list is a work in progress.
    on the DAO's get method to verify the update. Instead, use raw SQL to
    retrieve the inserted/updated row and assert it works. `Related
    mailing list
-   thread. <http://groups.google.com/group/thinkupapp/browse_thread/thread/cc9ca0fb19378245>`_
+   thread. <http://groups.google.com/group/thinkup/browse_thread/thread/cc9ca0fb19378245>`_
 
 -  **Crawler plugin tests:** When testing data returned by a web service
    API, do not query the live API in your tests. Instead, mock a class
    that returns all possible values that you expect from the API, and
    write tests against those values. For example, the `mock TwitterOAuth
-   class <http://github.com/ginatrapani/ThinkUp/blob/master/webapp/plugins/twitter/tests/classes/mock.TwitterOAuth.php>`_
+   class <https://github.com/ThinkUpLLC/ThinkUp/blob/master/webapp/plugins/twitter/tests/classes/mock.TwitterOAuth.php>`_
    reads test Twitter data from files stored in the testdata directory,
    instead of hitting Twitter.com live.

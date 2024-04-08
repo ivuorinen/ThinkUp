@@ -1,21 +1,30 @@
+# Config and dotfiles
+.*
+!.travis.yml
+!.scrutinizer.yml
 webapp/config.inc.php
 webapp/config.inc.bak.php
+tests/config.tests.inc.php
+extras/cron/config
+extras/scripts/autodeploy-conf
+extras/scripts/insight-html-to-server-conf
+extras/scripts/migratedb-conf
+extras/scripts/insight-html-to-server-conf
+extras/scripts/test-pull-postback-conf
+extras/dev/ramdisk/osx_make_ramdisk_db.conf
+extras/scripts/lic_header.py
+
+# Temp data
 data/
 !tests/data
 !webapp/data/README.md
-tests/config.tests.inc.php
-.*
-!.travis.yml
-extras/cron/config
-extras/scripts/autodeploy-conf
-extras/scripts/migratedb-conf
-extras/scripts/lic_header.py
-extras/scripts/test-pull-postback-conf
+
+# Compiled packages and process files
+build/
 webapp/test_installer/*
 webapp/plugins/twitterrealtime/streaming/*.pid
-build/
-extras/dev/ramdisk/osx_make_ramdisk_db.conf
 
+# Plugins except for core plugins
 webapp/plugins/*
 !webapp/plugins/expandurls/
 !webapp/plugins/facebook/
@@ -26,3 +35,12 @@ webapp/plugins/*
 !webapp/plugins/insightsgenerator/
 !webapp/plugins/twitter/
 !webapp/plugins/twitterrealtime/
+!webapp/plugins/youtube/
+!webapp/plugins/instagram/
+
+# ThinkUpLLC-specific extensions
+thinkupllc*
+
+# Grunt and NPM files
+node_modules
+node_modules
